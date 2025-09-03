@@ -30,6 +30,7 @@ db.sqlite3
 media/
 staticfiles/
 .env
+*.env
 *.pyo
 *.pyd
 
@@ -38,3 +39,5 @@ staticfiles/
 !**/migrations/__init__.py
 
 *.txt
+
+README_CONTEXTO.md
