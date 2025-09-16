@@ -59,3 +59,12 @@ La IA debe seguir estrictamente estas indicaciones para mantener consistencia, c
 
 Estos estándares aplican a backend (Django), frontend (React) y cualquier integración futura.
 
+---
+
+## 🟠 **Actualización reciente**
+
+- **Migración completa a autenticación JWT:** El backend y frontend ahora usan tokens JWT para login, logout y protección de endpoints, eliminando la dependencia de cookies y CSRF.
+- **Flujo de login y navegación corregido:** El frontend actualiza correctamente el estado de usuario tras login y permite la navegación entre Dashboard, Perfil y Registro.
+- **Validación y manejo de errores mejorados:** El frontend muestra mensajes claros en caso de error de autenticación y gestiona el estado de carga y sesión de manera robusta.
+- **Documentación y estructura de archivos revisada:** Todos los cambios y archivos nuevos están documentados y ubicados según los estándares definidos.
+

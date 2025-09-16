@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { login } from '../services/authService';
 
-const Login = ({ onLogin }) => {
+const Login = ({ onLogin, onMostrarRegistro }) => {
   const [correo_electronico, setCorreo] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -11,10 +11,10 @@ const Login = ({ onLogin }) => {
     setError('');
     try {
       const respuesta = await login(correo_electronico, password);
-      if (respuesta.mensaje === 'Autenticación exitosa') {
-        onLogin(correo_electronico);
+      if (respuesta && respuesta.access) {
+        onLogin(correo_electronico, password);
       } else {
-        setError(respuesta.mensaje || 'Error al iniciar sesión');
+        setError('Error al iniciar sesión');
       }
     } catch (err) {
       setError('Credenciales inválidas');
@@ -63,7 +63,7 @@ const Login = ({ onLogin }) => {
             <button
               type="button"
               className="mt-4 text-green-700 underline"
-              onClick={() => onLogin('registro')}
+              onClick={onMostrarRegistro}
             >
               ¿Desea registrarse?
             </button>

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { getCurrentUser, logout } from './services/authService';
+import { getCurrentUser, logout, login } from './services/authService';
+import { apiClient, API_ENDPOINTS } from './services/apiConfig';
 import Login from './components/Login';
 import Navbar from './components/Navbar';
 import PerfilUsuario from './pages/PerfilUsuario';
 import Registro from './components/Registro';
 import Proyectos from './pages/Proyectos';
-import Dashboard from './components/Dashboard'; // Importar el nuevo Dashboard
+import Dashboard from './components/Dashboard';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -15,15 +16,16 @@ function App() {
   const [mostrarRegistro, setMostrarRegistro] = useState(false);
 
   useEffect(() => {
-    console.log('App.jsx: Iniciando fetchUser');  // Log 1: Inicio del useEffect
+    // Si tienes CSRF en el backend, puedes eliminar esta línea con JWT puro
+    // apiClient.get(API_ENDPOINTS.CSRF).then(() => {
+    //   console.log('CSRF cookie establecida');
+    // });
+
     const fetchUser = async () => {
-      console.log('App.jsx: Llamando a getCurrentUser');  // Log 2: Antes de llamar
       try {
         const userData = await getCurrentUser();
-        console.log('Datos de getCurrentUser en App.jsx:', userData);  // Log 3: Después de llamar
         setUser(userData);
       } catch (error) {
-        console.error("Error fetching user:", error);
         setUser(null);
       } finally {
         setLoading(false);
@@ -33,29 +35,23 @@ function App() {
     fetchUser();
   }, []);
 
-  const handleLogin = async (email, password) => {
+  const handleLogin = async (correo_electronico, password) => {
     try {
-      const usuarioDesdeLogin = await login(email, password); // usa authService.login
-      // intentar obtener usuario definitivo desde /api/me
-      let usuarioActual = null;
-      try {
-        usuarioActual = await getCurrentUser();
-      } catch (_) {
-        usuarioActual = null;
+      const respuesta = await login(correo_electronico, password);
+      if (respuesta && respuesta.access) {
+        const usuarioActual = await getCurrentUser();
+        setUser(usuarioActual);
+        setMostrarRegistro(false);
       }
-      // si getCurrentUser falla, usar la info del login (contiene nombre/apellido si el backend la retorna)
-      setUser(usuarioActual ?? usuarioDesdeLogin ?? { email });
     } catch (err) {
-      // manejar error de login
+      // Puedes mostrar un mensaje de error aquí si lo necesitas
     }
   };
 
   const handleLogout = async () => {
-    const result = await logout();
-    if (result) {
-      setUser(null);
-      setMostrarPerfil(false);
-    }
+    await logout();
+    setUser(null);
+    setMostrarPerfil(false);
   };
 
   const handleIrPerfil = () => {
@@ -86,7 +82,7 @@ function App() {
   }
 
   if (!user) {
-    return <Login onLogin={handleLogin} />;
+    return <Login onLogin={handleLogin} onMostrarRegistro={() => setMostrarRegistro(true)} />;
   }
 
   return (
@@ -99,7 +95,7 @@ function App() {
               path="/"
               element={
                 !user ? (
-                  <Login onLogin={handleLogin} />
+                  <Login onLogin={handleLogin} onMostrarRegistro={() => setMostrarRegistro(true)} />
                 ) : mostrarPerfil ? (
                   <div>
                     <button
@@ -115,7 +111,7 @@ function App() {
                 )
               }
             />
-            <Route path="/registro" element={<Registro />} />
+            <Route path="/registro" element={<Registro onVolver={handleVolverLogin} />} />
             <Route path="/proyectos" element={<Proyectos />} />
           </Routes>
         </main>

@@ -5,48 +5,42 @@
 export const API_URL = 'http://127.0.0.1:8000';
 export const API_ENDPOINTS = {
   USUARIO: '/api/usuarios/',
-  LOGIN: '/api/login/',
-  LOGOUT: '/api/logout/',
+  LOGIN: '/api/token/',           // JWT login endpoint
+  REFRESH: '/api/token/refresh/', // JWT refresh endpoint
   PROYECTOS: '/api/proyectos/',
   USER_ME: '/api/me/',
 };
 
-/** obtiene una cookie por nombre (csrftoken) */
-function getCookie(name) {
-  const matches = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
-  return matches ? decodeURIComponent(matches[1]) : null;
+export function setToken(token) {
+  localStorage.setItem('jwt', token);
 }
 
-/** cliente HTTP usando fetch y enviando credenciales */
+export function getToken() {
+  return localStorage.getItem('jwt');
+}
+
+export function removeToken() {
+  localStorage.removeItem('jwt');
+}
+
 export const apiClient = {
   async request(method, url, data = null) {
     const fullUrl = API_URL + url;
-    console.log(`apiClient: ${method} llamada a`, fullUrl, data ? 'con datos:' : '');
     const headers = { 'Accept': 'application/json' };
-    if (method !== 'GET') {
-      headers['Content-Type'] = 'application/json';
-      const csrftoken = getCookie('csrftoken');
-      if (csrftoken) headers['X-CSRFToken'] = csrftoken;
-    }
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (method !== 'GET') headers['Content-Type'] = 'application/json';
     const options = {
       method,
       headers,
-      credentials: 'include', // <-- IMPORTANTE: enviar cookies de sesión
     };
     if (data) options.body = JSON.stringify(data);
 
-    // DEBUG: mostrar token CSRF y opciones enviadas al fetch (no mostrar password en logs)
-    console.log('apiClient DEBUG: csrftoken=', getCookie('csrftoken'));
-    console.log('apiClient DEBUG: options antes de fetch =', { method: options.method, headers: options.headers, credentials: options.credentials, bodyPreview: data ? Object.keys(data) : null });
-
     try {
       const resp = await fetch(fullUrl, options);
-      console.log('apiClient DEBUG: response headers =', Array.from(resp.headers.entries()));
-      console.log('apiClient: Respuesta status:', resp.status);
       const text = await resp.text();
       const json = text ? JSON.parse(text) : null;
       if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
-      console.log('apiClient: Datos recibidos:', json);
       return { status: resp.status, data: json };
     } catch (error) {
       console.error(`apiClient: Error en ${method}:`, error);

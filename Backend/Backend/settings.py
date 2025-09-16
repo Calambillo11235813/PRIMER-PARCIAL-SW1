@@ -33,9 +33,13 @@ DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() in ('1', 'true', 'yes')
 
 # Hosts & CORS from environment (comma-separated)
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+]
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173').split(',')
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:5173",
+]
 
 
 # Application definition
@@ -51,6 +55,8 @@ INSTALLED_APPS = [
     'corsheaders',  
     'usuario',
     'proyecto',
+    'rest_framework',
+    'rest_framework_simplejwt',
 ]
 
 MIDDLEWARE = [
@@ -171,10 +177,12 @@ CORS_ALLOW_CREDENTIALS = True
 # Asegúrate de que el origen frontend esté en CORS_ALLOWED_ORIGINS y CSRF_TRUSTED_ORIGINS
 CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173').split(',')
 
-# Configuración de cookies (ajusta SESSION_COOKIE_SECURE en producción)
-SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'None')  # 'None' para cross-site en desarrollo
-SESSION_COOKIE_SECURE = os.getenv('DJANGO_DEBUG', 'False').lower() not in ('1','true','yes')
-CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE
+# Configura JWT como autenticación por defecto
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
 
 AUTH_USER_MODEL = 'usuario.UsuarioPersonalizado'
 
