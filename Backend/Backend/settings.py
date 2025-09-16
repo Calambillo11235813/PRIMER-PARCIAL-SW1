@@ -15,7 +15,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'social_django',
-    'corsheaders',  # Añade esta línea
+    'corsheaders',  
+    'usuario',
 ]
 
 MIDDLEWARE = [
@@ -85,8 +86,12 @@ WSGI_APPLICATION = 'Backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB'),
+        'USER': os.getenv('POSTGRES_USER'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
+        'HOST': os.getenv('POSTGRES_HOST'),
+        'PORT': os.getenv('POSTGRES_PORT'),
     }
 }
 
@@ -132,10 +137,10 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-AUTHENTICATION_BACKENDS = (
-    'social_core.backends.google.GoogleOAuth2',
+AUTHENTICATION_BACKENDS = [
+    'usuario.backend.AutenticacionPorCorreoBackend',
     'django.contrib.auth.backends.ModelBackend',
-)
+]
 
 GOOGLE_OAUTH2_CLIENT_ID = os.environ.get('GOOGLE_OAUTH2_CLIENT_ID')
 GOOGLE_OAUTH2_CLIENT_SECRET = os.environ.get('GOOGLE_OAUTH2_CLIENT_SECRET')
@@ -153,3 +158,5 @@ CORS_ALLOWED_ORIGINS = [
 
 # Permite que las cookies sean enviadas con las solicitudes CORS
 CORS_ALLOW_CREDENTIALS = True
+
+AUTH_USER_MODEL = 'usuario.UsuarioPersonalizado'

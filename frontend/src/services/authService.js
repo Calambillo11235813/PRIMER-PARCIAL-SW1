@@ -1,8 +1,7 @@
 /**
  * Servicio para manejar la autenticación y operaciones relacionadas con usuarios
  */
-
-const API_URL = 'http://127.0.0.1:8000';
+import { API_ENDPOINTS, apiClient } from './apiConfig';
 
 /**
  * Obtiene la información del usuario autenticado
@@ -10,15 +9,7 @@ const API_URL = 'http://127.0.0.1:8000';
  */
 export const getCurrentUser = async () => {
   try {
-    const response = await fetch(`${API_URL}/api/user/`, {
-      credentials: 'include', // Importante para enviar cookies
-    });
-    
-    if (!response.ok) {
-      throw new Error('No autenticado');
-    }
-    
-    return await response.json();
+    return await apiClient.get(API_ENDPOINTS.USUARIO);
   } catch (error) {
     console.error('Error al obtener usuario:', error);
     return null;
@@ -26,10 +17,18 @@ export const getCurrentUser = async () => {
 };
 
 /**
- * Inicia sesión con Google
+ * Inicia sesión con usuario y contraseña
+ * @param {string} correo_electronico
+ * @param {string} password
+ * @returns {Promise} Promesa con la respuesta del backend
  */
-export const loginWithGoogle = () => {
-  window.location.href = `${API_URL}/auth/login/google-oauth2/`;
+export const login = async (correo_electronico, password) => {
+  try {
+    return await apiClient.post(API_ENDPOINTS.LOGIN, { correo_electronico, password });
+  } catch (error) {
+    console.error('Error en login:', error);
+    throw error;
+  }
 };
 
 /**
@@ -38,15 +37,7 @@ export const loginWithGoogle = () => {
  */
 export const logout = async () => {
   try {
-    const response = await fetch(`${API_URL}/auth/logout/`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-    
-    if (!response.ok) {
-      throw new Error('Error al cerrar sesión');
-    }
-    
+    await apiClient.post(API_ENDPOINTS.LOGOUT);
     return true;
   } catch (error) {
     console.error('Error en logout:', error);

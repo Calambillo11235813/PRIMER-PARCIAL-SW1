@@ -4,13 +4,9 @@
 
 export const API_URL = 'http://127.0.0.1:8000';
 export const API_ENDPOINTS = {
-  USER: '/api/user/',
-  PROJECTS: '/api/projects/',
-  DIAGRAMS: '/api/diagrams/',
-  AUTH: {
-    GOOGLE_LOGIN: '/auth/login/google-oauth2/',
-    LOGOUT: '/auth/logout/'
-  }
+  USUARIO: '/api/usuarios/',
+  LOGIN: '/api/login/',
+  LOGOUT: '/api/logout/', // <-- Agrega esta línea
 };
 
 /**
