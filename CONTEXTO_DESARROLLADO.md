@@ -1,68 +1,61 @@
-# CONTEXTO DESARROLLADO
+# CONTEXTO DESARROLLADO (Actualizado)
 
 ## 🟢 Avances Realizados
 
-1. **Configuración del entorno de desarrollo**
-   - Creación del entorno virtual en Python.
-   - Instalación de dependencias principales (Django, DRF, Channels, etc.).
-   - Configuración de `.gitignore` para excluir archivos innecesarios.
+1. **Configuración del entorno**
+   - Entorno virtual Python y dependencias instaladas.
+   - Docker y PostgreSQL configurados con archivo `.env`.
 
-2. **Inicialización del proyecto Django**
-   - Creación del proyecto y la app principal `usuario`.
-   - Registro de la app en `INSTALLED_APPS`.
+2. **Backend Django**
+   - Proyecto y app `usuario` inicializados.
+   - Modelo `UsuarioPersonalizado` con campos en español y migraciones aplicadas.
+   - Endpoints REST para login, logout y CRUD de usuarios implementados con Django REST Framework.
+   - Backend de autenticación personalizado por correo electrónico.
+   - Validación y manejo correcto del campo `username` en el modelo y serializer.
+   - Depuración y corrección de errores de registro (duplicados, validaciones).
+   - Ejemplo de uso y documentación de endpoints en JSON.
 
-3. **Modelo de usuario personalizado**
-   - Definición del modelo `UsuarioPersonalizado` con campos en español.
-   - Configuración de `AUTH_USER_MODEL` en `settings.py`.
-   - Migraciones aplicadas correctamente en PostgreSQL (Docker).
-
-4. **Configuración de base de datos**
-   - Implementación de Docker y PostgreSQL.
-   - Uso de archivo `.env` para credenciales y configuración segura.
-
-5. **Implementación de autenticación y CRUD**
-   - Creación de endpoints para login y CRUD de usuarios usando Django REST Framework.
-   - Documentación de ejemplos JSON en los endpoints.
+3. **Frontend React**
+   - Proyecto React con Vite y Tailwind configurado.
+   - Servicios para autenticación y usuarios (`authService.js`, `usuarioService.js`, `apiConfig.js`).
+   - Componentes principales: Login, Navbar, Registro y PerfilUsuario.
+   - Página de perfil de usuario con edición y visualización de datos.
+   - Manejo de sesión y cierre de sesión desde el frontend.
+   - Navegación entre login y registro usando React Router.
+   - Corrección de duplicidad en la barra de navegación y mejora de UX.
+   - Registro de usuario funcional y redirección automática tras registro.
 
 ---
 
 ## 🟡 Próximos Pasos
 
-1. **Validaciones y seguridad**
-   - Agregar validaciones en el serializer y vistas.
-   - Implementar permisos y autenticación para los endpoints.
-
-2. **Registro de usuarios**
-   - Endpoint para registro de nuevos usuarios.
-   - Validación de datos y manejo de errores.
-
-3. **Colaboración en tiempo real**
-   - Integrar Django Channels para WebSockets.
-   - Sincronización de cambios en diagramas UML.
-
-4. **Gestión de proyectos y diagramas UML**
-   - Crear modelos y endpoints para proyectos y diagramas.
-   - Implementar lógica de edición y control de versiones.
-
-5. **Generación automática de código**
-   - Integrar lógica para transformar diagramas UML en código Spring Boot.
-   - Exportación de proyectos en formato ZIP.
-
-6. **Integración con IA**
-   - Conectar con APIs de IA para sugerencias y generación automática.
+- Validaciones y permisos avanzados en endpoints.
+- Panel de proyectos y gestión de diagramas UML.
+- Colaboración en tiempo real (Django Channels).
+- Generación automática de código backend desde diagramas.
+- Integración de IA para sugerencias y generación de diagramas.
+- Mejorar la edición y guardado del perfil de usuario.
+- Implementar notificaciones y manejo de errores en el frontend.
 
 ---
 
 ## 🟣 Estado Actual
 
-- El sistema permite autenticación y gestión básica de usuarios.
-- La base de datos está conectada y operativa.
-- Listo para avanzar con validaciones, colaboración y gestión de diagramas.
+- Autenticación y gestión básica de usuarios funcional.
+- Registro de usuarios y navegación entre páginas funcionando.
+- Interfaz de usuario intuitiva y conectada al backend.
+- Listo para avanzar con módulos colaborativos, panel de proyectos y diagramas UML.
 
 ---
 
 ## 🔵 Estándares de Desarrollo
 
-- Se utilizará el estándar de comentarios **PEP 8** para toda la documentación y comentarios en el código.
-- Todas las **variables, funciones y clases** tendrán nombres en español, siguiendo las buenas prácticas de legibilidad y coherencia con el contexto del proyecto.
+La IA debe seguir estrictamente estas indicaciones para mantener consistencia, claridad y calidad en todo el código generado:
+
+- **Comentarios y Documentación**: Seguir **PEP 8** para Python. Incluir docstrings en clases, funciones y métodos con descripciones claras, ejemplos de uso y parámetros. Usar comentarios en línea para lógica compleja.
+- **Nombres de Variables, Funciones y Clases**: Usar español para mayor claridad y coherencia (e.g., `ProyectoListaCrear` en lugar de `ProjectListCreate`). Evitar abreviaturas innecesarias.
+- **Navegación y Componentes**: En frontend, usar React Router para navegación y componentes reutilizables. Mantener estructura modular.
+- **General**: Priorizar legibilidad, evitar código duplicado, y validar contra factores de calidad (correctitud, eficiencia, fiabilidad, facilidad de uso, mantenimiento, portabilidad, seguridad).
+
+Estos estándares aplican a backend (Django), frontend (React) y cualquier integración futura.
 

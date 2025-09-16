@@ -26,12 +26,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-3cca7m8bjt5_od1_4vfo2-0yur+=a3_r22094t(#twd)@=q1w&'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'unsafe-default-secret')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG should be False in production; control via environment
+DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = []
+# Hosts & CORS from environment (comma-separated)
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173').split(',')
 
 
 # Application definition
@@ -46,17 +50,18 @@ INSTALLED_APPS = [
     'social_django',
     'corsheaders',  
     'usuario',
+    'proyecto',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # debe ir antes de CommonMiddleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # Añade esta línea
 ]
 
 ROOT_URLCONF = 'Backend.urls'
@@ -79,6 +84,16 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'Backend.wsgi.application'
+# ASGI / Channels (activar si se usa Django Channels)
+ASGI_APPLICATION = os.getenv('ASGI_APPLICATION', 'Backend.asgi.application')
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [os.getenv("REDIS_URL", "redis://redis:6379/0")],
+        },
+    },
+}
 
 
 # Database
@@ -150,13 +165,21 @@ LOGOUT_URL = 'logout'
 LOGIN_REDIRECT_URL = 'http://localhost:5173/'  # Puerto de Vite por defecto
 LOGOUT_REDIRECT_URL = '/'
 
-# Configura los orígenes permitidos para CORS
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Puerto predeterminado de Vite
-    "http://127.0.0.1:5173",
-]
-
-# Permite que las cookies sean enviadas con las solicitudes CORS
+# permitir envío de cookies en CORS (necesario para sesión basada en cookies)
 CORS_ALLOW_CREDENTIALS = True
 
+# Asegúrate de que el origen frontend esté en CORS_ALLOWED_ORIGINS y CSRF_TRUSTED_ORIGINS
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173').split(',')
+
+# Configuración de cookies (ajusta SESSION_COOKIE_SECURE en producción)
+SESSION_COOKIE_SAMESITE = os.getenv('SESSION_COOKIE_SAMESITE', 'None')  # 'None' para cross-site en desarrollo
+SESSION_COOKIE_SECURE = os.getenv('DJANGO_DEBUG', 'False').lower() not in ('1','true','yes')
+CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE
+
 AUTH_USER_MODEL = 'usuario.UsuarioPersonalizado'
+
+# Seguridad adicional para producción
+SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '0')) if not DEBUG else 0
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'

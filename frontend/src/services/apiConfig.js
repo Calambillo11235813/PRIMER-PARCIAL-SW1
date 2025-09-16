@@ -6,111 +6,56 @@ export const API_URL = 'http://127.0.0.1:8000';
 export const API_ENDPOINTS = {
   USUARIO: '/api/usuarios/',
   LOGIN: '/api/login/',
-  LOGOUT: '/api/logout/', // <-- Agrega esta línea
+  LOGOUT: '/api/logout/',
+  PROYECTOS: '/api/proyectos/',
+  USER_ME: '/api/me/',
 };
 
-/**
- * Cliente HTTP genérico con manejo de errores
- */
+/** obtiene una cookie por nombre (csrftoken) */
+function getCookie(name) {
+  const matches = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return matches ? decodeURIComponent(matches[1]) : null;
+}
+
+/** cliente HTTP usando fetch y enviando credenciales */
 export const apiClient = {
-  /**
-   * Realiza una petición GET
-   * @param {string} endpoint - Endpoint de la API
-   * @returns {Promise} Promesa con la respuesta
-   */
-  get: async (endpoint) => {
+  async request(method, url, data = null) {
+    const fullUrl = API_URL + url;
+    console.log(`apiClient: ${method} llamada a`, fullUrl, data ? 'con datos:' : '');
+    const headers = { 'Accept': 'application/json' };
+    if (method !== 'GET') {
+      headers['Content-Type'] = 'application/json';
+      const csrftoken = getCookie('csrftoken');
+      if (csrftoken) headers['X-CSRFToken'] = csrftoken;
+    }
+    const options = {
+      method,
+      headers,
+      credentials: 'include', // <-- IMPORTANTE: enviar cookies de sesión
+    };
+    if (data) options.body = JSON.stringify(data);
+
+    // DEBUG: mostrar token CSRF y opciones enviadas al fetch (no mostrar password en logs)
+    console.log('apiClient DEBUG: csrftoken=', getCookie('csrftoken'));
+    console.log('apiClient DEBUG: options antes de fetch =', { method: options.method, headers: options.headers, credentials: options.credentials, bodyPreview: data ? Object.keys(data) : null });
+
     try {
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        credentials: 'include',
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-      
-      return await response.json();
+      const resp = await fetch(fullUrl, options);
+      console.log('apiClient DEBUG: response headers =', Array.from(resp.headers.entries()));
+      console.log('apiClient: Respuesta status:', resp.status);
+      const text = await resp.text();
+      const json = text ? JSON.parse(text) : null;
+      if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
+      console.log('apiClient: Datos recibidos:', json);
+      return { status: resp.status, data: json };
     } catch (error) {
-      console.error(`GET ${endpoint} failed:`, error);
+      console.error(`apiClient: Error en ${method}:`, error);
       throw error;
     }
   },
-  
-  /**
-   * Realiza una petición POST
-   * @param {string} endpoint - Endpoint de la API
-   * @param {Object} data - Datos a enviar
-   * @returns {Promise} Promesa con la respuesta
-   */
-  post: async (endpoint, data = {}) => {
-    try {
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error(`POST ${endpoint} failed:`, error);
-      throw error;
-    }
-  },
-  
-  /**
-   * Realiza una petición PUT
-   * @param {string} endpoint - Endpoint de la API
-   * @param {Object} data - Datos a enviar
-   * @returns {Promise} Promesa con la respuesta
-   */
-  put: async (endpoint, data = {}) => {
-    try {
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error(`PUT ${endpoint} failed:`, error);
-      throw error;
-    }
-  },
-  
-  /**
-   * Realiza una petición DELETE
-   * @param {string} endpoint - Endpoint de la API
-   * @returns {Promise} Promesa con la respuesta
-   */
-  delete: async (endpoint) => {
-    try {
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error(`DELETE ${endpoint} failed:`, error);
-      throw error;
-    }
-  },
+
+  get(url) { return this.request('GET', url); },
+  post(url, data) { return this.request('POST', url, data); },
+  put(url, data) { return this.request('PUT', url, data); },
+  delete(url) { return this.request('DELETE', url); },
 };

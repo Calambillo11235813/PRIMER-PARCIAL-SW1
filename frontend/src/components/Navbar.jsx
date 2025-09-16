@@ -1,11 +1,12 @@
 import React from 'react';
+import { Link } from 'react-router-dom';  // Importa Link para navegación con React Router
 
 const Navbar = ({ usuario, onLogout, onIrPerfil }) => {
   return (
     <nav className="bg-green-600 text-white px-4 py-3 flex justify-between items-center shadow-md">
       <div className="flex items-center space-x-4">
         <span className="font-bold text-xl">UML Colaborativo</span>
-        <a href="/proyectos" className="hover:underline">Proyectos</a>
+        <Link to="/proyectos" className="hover:underline">Proyectos</Link>  // Cambia a Link para navegación
         <a href="/diagramas" className="hover:underline">Diagramas</a>
         <button
           onClick={onIrPerfil}

@@ -60,6 +60,13 @@ const Login = ({ onLogin }) => {
           <div className="mt-8 text-center text-sm text-gray-500">
             <p>Mes de Santa Cruz - Bolivia</p>
             <p className="mt-1 text-green-600 font-medium">¡Celebremos juntos!</p>
+            <button
+              type="button"
+              className="mt-4 text-green-700 underline"
+              onClick={() => onLogin('registro')}
+            >
+              ¿Desea registrarse?
+            </button>
           </div>
         </div>
         

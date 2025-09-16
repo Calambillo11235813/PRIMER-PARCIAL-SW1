@@ -1,18 +1,26 @@
 import React, { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { getCurrentUser, logout } from './services/authService';
 import Login from './components/Login';
 import Navbar from './components/Navbar';
 import PerfilUsuario from './pages/PerfilUsuario';
+import Registro from './components/Registro';
+import Proyectos from './pages/Proyectos';
+import Dashboard from './components/Dashboard'; // Importar el nuevo Dashboard
 
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mostrarPerfil, setMostrarPerfil] = useState(false);
+  const [mostrarRegistro, setMostrarRegistro] = useState(false);
 
   useEffect(() => {
+    console.log('App.jsx: Iniciando fetchUser');  // Log 1: Inicio del useEffect
     const fetchUser = async () => {
+      console.log('App.jsx: Llamando a getCurrentUser');  // Log 2: Antes de llamar
       try {
         const userData = await getCurrentUser();
+        console.log('Datos de getCurrentUser en App.jsx:', userData);  // Log 3: Después de llamar
         setUser(userData);
       } catch (error) {
         console.error("Error fetching user:", error);
@@ -25,8 +33,21 @@ function App() {
     fetchUser();
   }, []);
 
-  const handleLogin = (email) => {
-    setUser({ email });
+  const handleLogin = async (email, password) => {
+    try {
+      const usuarioDesdeLogin = await login(email, password); // usa authService.login
+      // intentar obtener usuario definitivo desde /api/me
+      let usuarioActual = null;
+      try {
+        usuarioActual = await getCurrentUser();
+      } catch (_) {
+        usuarioActual = null;
+      }
+      // si getCurrentUser falla, usar la info del login (contiene nombre/apellido si el backend la retorna)
+      setUser(usuarioActual ?? usuarioDesdeLogin ?? { email });
+    } catch (err) {
+      // manejar error de login
+    }
   };
 
   const handleLogout = async () => {
@@ -45,6 +66,10 @@ function App() {
     setMostrarPerfil(false);
   };
 
+  const handleVolverLogin = () => {
+    setMostrarRegistro(false);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-green-50 flex items-center justify-center">
@@ -56,49 +81,47 @@ function App() {
     );
   }
 
+  if (!user && mostrarRegistro) {
+    return <Registro onVolver={handleVolverLogin} />;
+  }
+
   if (!user) {
     return <Login onLogin={handleLogin} />;
   }
 
   return (
-    <div className="min-h-screen bg-green-50">
-      <Navbar usuario={user} onLogout={handleLogout} onIrPerfil={handleIrPerfil} />
-      <main className="container mx-auto p-4 mt-6">
-        {mostrarPerfil ? (
-          <div>
-            <button
-              onClick={handleVolver}
-              className="mb-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
-            >
-              Volver
-            </button>
-            <PerfilUsuario usuario={user} />
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow-lg p-6 border border-green-200">
-            <h2 className="text-xl font-bold text-green-800 mb-4">
-              Bienvenido, {user.first_name || user.username || user.email}
-            </h2>
-            <p className="text-gray-600">
-              Comienza a crear y colaborar en diagramas UML.
-            </p>
-            <div className="mt-8 p-4 bg-green-50 rounded-md border border-green-200">
-              <p className="text-center text-green-700">
-                Contenido de la aplicación...
-              </p>
-              <button
-                onClick={handleIrPerfil}
-                className="mt-6 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
-              >
-                Ir a mi perfil
-              </button>
-            </div>
-          </div>
-        )}
-      </main>
-    </div>
+    <BrowserRouter>
+      <div className="min-h-screen bg-green-50">
+        {user && <Navbar usuario={user} onLogout={handleLogout} onIrPerfil={handleIrPerfil} />}
+        <main className="container mx-auto p-4 mt-6">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                !user ? (
+                  <Login onLogin={handleLogin} />
+                ) : mostrarPerfil ? (
+                  <div>
+                    <button
+                      onClick={handleVolver}
+                      className="mb-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
+                    >
+                      Volver
+                    </button>
+                    <PerfilUsuario usuario={user} />
+                  </div>
+                ) : (
+                  <Dashboard user={user} onIrPerfil={handleIrPerfil} />
+                )
+              }
+            />
+            <Route path="/registro" element={<Registro />} />
+            <Route path="/proyectos" element={<Proyectos />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
   );
 }
 
 export default App;
-

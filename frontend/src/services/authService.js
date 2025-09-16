@@ -5,42 +5,45 @@ import { API_ENDPOINTS, apiClient } from './apiConfig';
 
 /**
  * Obtiene la información del usuario autenticado
- * @returns {Promise} Promesa que resuelve con los datos del usuario o null si no está autenticado
+ * @returns {Promise<Object|null>}
  */
 export const getCurrentUser = async () => {
   try {
-    return await apiClient.get(API_ENDPOINTS.USUARIO);
+    const resp = await apiClient.get(API_ENDPOINTS.USER_ME);
+    return resp.data || null;
   } catch (error) {
-    console.error('Error al obtener usuario:', error);
+    console.error('getCurrentUser: Error obteniendo usuario actual:', error);
     return null;
   }
 };
 
 /**
- * Inicia sesión con usuario y contraseña
- * @param {string} correo_electronico
+ * Iniciar sesión (usa cookies de sesión)
+ * @param {string} correo
  * @param {string} password
- * @returns {Promise} Promesa con la respuesta del backend
+ * @returns {Promise<Object>} respuesta del backend (ej. {mensaje, usuario})
  */
-export const login = async (correo_electronico, password) => {
+export const login = async (correo, password) => {
   try {
-    return await apiClient.post(API_ENDPOINTS.LOGIN, { correo_electronico, password });
+    const resp = await apiClient.post(API_ENDPOINTS.LOGIN, { correo_electronico: correo, password });
+    // devolver usuario si backend lo incluye
+    return resp.data?.usuario ?? resp.data ?? null;
   } catch (error) {
-    console.error('Error en login:', error);
+    console.error('authService.login error:', error);
     throw error;
   }
 };
 
 /**
- * Cierra la sesión del usuario actual
- * @returns {Promise} Promesa que resuelve cuando se completa el logout
+ * Cerrar sesión
+ * @returns {Promise<boolean>}
  */
 export const logout = async () => {
   try {
-    await apiClient.post(API_ENDPOINTS.LOGOUT);
+    await apiClient.post(API_ENDPOINTS.LOGOUT, {});
     return true;
   } catch (error) {
-    console.error('Error en logout:', error);
+    console.error('authService.logout error:', error);
     return false;
   }
 };
