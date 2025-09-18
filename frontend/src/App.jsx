@@ -6,8 +6,8 @@ import Login from './components/Login';
 import Navbar from './components/Navbar';
 import PerfilUsuario from './pages/PerfilUsuario';
 import Registro from './components/Registro';
-import Proyectos from './pages/Proyectos';
 import Dashboard from './components/Dashboard';
+import ListaProyectos from './components/Proyecto/ListaProyectos';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -112,7 +112,7 @@ function App() {
               }
             />
             <Route path="/registro" element={<Registro onVolver={handleVolverLogin} />} />
-            <Route path="/proyectos" element={<Proyectos />} />
+            <Route path="/proyectos" element={<ListaProyectos />} />
           </Routes>
         </main>
       </div>

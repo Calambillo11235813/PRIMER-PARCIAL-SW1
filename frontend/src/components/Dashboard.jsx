@@ -14,10 +14,12 @@ import {
   Bell
 } from 'lucide-react';
 import { obtenerUsuarioPorId } from '../services/usuarioService.js';  // Importa la función
+import WizardCrearProyecto from './Proyecto/CrearProyecto.jsx';
 
 const Dashboard = ({ user, onIrPerfil }) => {
   const [usuarioCompleto, setUsuarioCompleto] = useState(user);  // Estado para datos completos
   const [cargandoUsuario, setCargandoUsuario] = useState(false);
+  const [wizardAbierto, setWizardAbierto] = useState(false);
 
   // Cargar datos completos del usuario al montar
   useEffect(() => {
@@ -241,12 +243,13 @@ const Dashboard = ({ user, onIrPerfil }) => {
           value={estadisticas.totalProyectos} 
           trend="+2 este mes"
         />
-        <StatCard 
+        {/* Elimina Proyectos Activos */}
+        {/* <StatCard 
           icon={Zap} 
           label="Proyectos Activos" 
           value={estadisticas.proyectosActivos}
           color="blue"
-        />
+        /> */}
         <StatCard 
           icon={Users} 
           label="Colaboraciones" 
@@ -269,15 +272,16 @@ const Dashboard = ({ user, onIrPerfil }) => {
             icon={Plus}
             title="Nuevo Proyecto"
             description="Crear un diagrama UML desde cero"
-            action={() => console.log('Crear proyecto')}
+            action={() => setWizardAbierto(true)}
           />
-          <QuickActionCard
+          {/* Elimina la acción de Plantillas */}
+          {/* <QuickActionCard
             icon={FileText}
             title="Plantillas"
             description="Comenzar con plantillas predefinidas"
             action={() => console.log('Ver plantillas')}
             color="blue"
-          />
+          /> */}
           <QuickActionCard
             icon={Users}
             title="Colaborar"
@@ -358,6 +362,15 @@ const Dashboard = ({ user, onIrPerfil }) => {
           </div>
         </div>
       </div>
+
+      <WizardCrearProyecto
+        isOpen={wizardAbierto}
+        onClose={() => setWizardAbierto(false)}
+        onProyectoCreado={proyecto => {
+          // lógica para agregar el proyecto a la lista
+          setWizardAbierto(false);
+        }}
+      />
     </div>
   );
 };

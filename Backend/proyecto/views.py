@@ -2,6 +2,8 @@ from django.shortcuts import render
 from rest_framework import generics
 from .models import Proyecto
 from .serializer import ProyectoSerializer
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 
 class ProyectoListaCrear(generics.ListCreateAPIView):
     """
@@ -19,7 +21,7 @@ class ProyectoListaCrear(generics.ListCreateAPIView):
     """
     queryset = Proyecto.objects.all()
     serializer_class = ProyectoSerializer
-    # Removido permission_classes para permitir acceso sin autenticación
+    permission_classes = [AllowAny]  # Permite acceso sin autenticación
 
     def perform_create(self, serializer):
         """
@@ -49,4 +51,4 @@ class ProyectoDetalleActualizarEliminar(generics.RetrieveUpdateDestroyAPIView):
     """
     queryset = Proyecto.objects.all()
     serializer_class = ProyectoSerializer
-    # Removido permission_classes para permitir acceso sin autenticación
+    permission_classes = [AllowAny]  # Permite acceso sin autenticación

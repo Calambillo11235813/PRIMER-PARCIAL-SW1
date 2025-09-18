@@ -24,5 +24,5 @@ urlpatterns = [
     path('api/user/', user_info),  # Añade esta línea
     path('', include('usuario.urls')),  # Mantén esto para otras rutas
     path('api/', include('usuario.urls')),  # Agrega esta línea para /api/user/me/
-    path('api/', include('proyecto.urls')),  # Asegúrate de que esté incluido
+    path('', include('proyecto.urls')),  # Asegúrate de que esté incluido
 ]

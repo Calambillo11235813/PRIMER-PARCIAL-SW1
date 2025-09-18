@@ -19,6 +19,7 @@ class UsuarioListaCrear(generics.ListCreateAPIView):
     """
     queryset = UsuarioPersonalizado.objects.all()
     serializer_class = UsuarioPersonalizadoSerializer
+    permission_classes = [AllowAny]  # Permite acceso sin autenticación
 
     def post(self, request, *args, **kwargs):
         safe_data = request.data.copy()
@@ -33,6 +34,7 @@ class UsuarioDetalleActualizarEliminar(generics.RetrieveUpdateDestroyAPIView):
     """
     queryset = UsuarioPersonalizado.objects.all()
     serializer_class = UsuarioPersonalizadoSerializer
+    permission_classes = [AllowAny]  # Permite acceso sin autenticación
 
 
 @api_view(['GET'])
