@@ -1,78 +1,44 @@
 /**
  * Servicio para manejar operaciones relacionadas con diagramas UML
  */
+import { apiClient, API_ENDPOINTS } from './apiConfig';
 
-const API_URL = 'http://127.0.0.1:8000/api';
+/**
+ * Obtiene todos los diagramas
+ */
+export const obtenerDiagramas = async () => {
+  return await apiClient.get(API_ENDPOINTS.DIAGRAMAS);
+};
 
 /**
  * Obtiene los datos de un diagrama específico
- * @param {string} diagramId - ID del diagrama
- * @returns {Promise} Promesa que resuelve con los datos del diagrama
+ * @param {number|string} idDiagrama
  */
-export const getDiagramById = async (diagramId) => {
-  try {
-    const response = await fetch(`${API_URL}/diagrams/${diagramId}/`, {
-      credentials: 'include',
-    });
-    
-    if (!response.ok) {
-      throw new Error('Error al obtener diagrama');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error en getDiagramById:', error);
-    throw error;
-  }
+export const obtenerDiagramaPorId = async (idDiagrama) => {
+  return await apiClient.get(`${API_ENDPOINTS.DIAGRAMAS}${idDiagrama}/`);
 };
 
 /**
- * Guarda los cambios de un diagrama
- * @param {string} diagramId - ID del diagrama
- * @param {Object} diagramData - Datos del diagrama a guardar
- * @returns {Promise} Promesa que resuelve con el diagrama actualizado
+ * Crea un nuevo diagrama
+ * @param {Object} datosDiagrama
  */
-export const saveDiagram = async (diagramId, diagramData) => {
-  try {
-    const response = await fetch(`${API_URL}/diagrams/${diagramId}/`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(diagramData),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Error al guardar diagrama');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error en saveDiagram:', error);
-    throw error;
-  }
+export const crearDiagrama = async (datosDiagrama) => {
+  return await apiClient.post(API_ENDPOINTS.DIAGRAMAS, datosDiagrama);
 };
 
 /**
- * Genera código a partir de un diagrama UML
- * @param {string} diagramId - ID del diagrama
- * @returns {Promise} Promesa que resuelve con la URL del código generado
+ * Actualiza un diagrama existente
+ * @param {number|string} idDiagrama
+ * @param {Object} datosDiagrama
  */
-export const generateCode = async (diagramId) => {
-  try {
-    const response = await fetch(`${API_URL}/diagrams/${diagramId}/generate-code/`, {
-      method: 'POST',
-      credentials: 'include',
-    });
-    
-    if (!response.ok) {
-      throw new Error('Error al generar código');
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error en generateCode:', error);
-    throw error;
-  }
+export const actualizarDiagrama = async (idDiagrama, datosDiagrama) => {
+  return await apiClient.put(`${API_ENDPOINTS.DIAGRAMAS}${idDiagrama}/`, datosDiagrama);
+};
+
+/**
+ * Elimina un diagrama
+ * @param {number|string} idDiagrama
+ */
+export const eliminarDiagrama = async (idDiagrama) => {
+  return await apiClient.delete(`${API_ENDPOINTS.DIAGRAMAS}${idDiagrama}/`);
 };

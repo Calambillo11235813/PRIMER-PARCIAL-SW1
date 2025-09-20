@@ -1,12 +1,12 @@
 # 🎄 Herramienta UML Colaborativa
 
-Una herramienta web para diseñar diagramas UML de manera colaborativa en tiempo real y generar código Spring Boot automáticamente.
+Una herramienta web para diseñar diagramas de clase UML de manera colaborativa en tiempo real y generar código Spring Boot automáticamente.
 
 *Diseño especial en colores blanco y verde en honor al mes de Santa Cruz, Bolivia* 🇧🇴✨
 
 ## ✨ Características
 
-- 🎨 Editor visual de diagramas UML con arrastrar y soltar.
+- 🎨 Editor visual de diagramas de clase UML con arrastrar y soltar.
 - 👥 Colaboración en tiempo real con múltiples usuarios.
 - 🤖 Generación automática de código Spring Boot (4 capas).
 - 🧠 Asistencia por IA para diseño y optimización.

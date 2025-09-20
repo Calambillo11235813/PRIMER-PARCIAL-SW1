@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from rest_framework import generics
-from .models import Proyecto
-from .serializer import ProyectoSerializer
+from .models import Proyecto, DiagramaClase
+from .serializer import ProyectoSerializer, DiagramaClaseSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 
@@ -52,3 +52,63 @@ class ProyectoDetalleActualizarEliminar(generics.RetrieveUpdateDestroyAPIView):
     queryset = Proyecto.objects.all()
     serializer_class = ProyectoSerializer
     permission_classes = [AllowAny]  # Permite acceso sin autenticación
+
+
+class DiagramaClaseListaCrear(generics.ListCreateAPIView):
+    """
+    GET /diagramas/
+    Lista todos los diagramas de clases.
+
+    POST /diagramas/
+    Crea un nuevo diagrama de clases.
+
+    Ejemplo de JSON para POST:
+    {
+        "nombre": "Diagrama de Ventas",
+        "descripcion": "Diagrama de clases para el módulo de ventas",
+        "proyecto": 1,
+        "estructura": {
+            "clases": [
+                {"nombre": "Producto", "atributos": ["id", "nombre", "precio"]},
+                {"nombre": "Venta", "atributos": ["id", "fecha", "total"]}
+            ],
+            "relaciones": [
+                {"origen": "Venta", "destino": "Producto", "tipo": "asociación"}
+            ]
+        }
+    }
+    """
+    queryset = DiagramaClase.objects.all()
+    serializer_class = DiagramaClaseSerializer
+    permission_classes = [AllowAny]
+
+class DiagramaClaseDetalleActualizarEliminar(generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET /diagramas/<id>/
+    Obtiene los detalles de un diagrama de clases.
+
+    PUT /diagramas/<id>/
+    Actualiza los datos de un diagrama de clases.
+
+    Ejemplo de JSON para PUT:
+    {
+        "nombre": "Diagrama de Ventas Actualizado",
+        "descripcion": "Actualización del diagrama de clases para ventas",
+        "proyecto":4,
+        "estructura": {
+            "clases": [
+                {"nombre": "Producto", "atributos": ["id", "nombre", "precio", "stock"]},
+                {"nombre": "Venta", "atributos": ["id", "fecha", "total", "cliente"]}
+            ],
+            "relaciones": [
+                {"origen": "Venta", "destino": "Producto", "tipo": "asociación"}
+            ]
+        }
+    }
+
+    DELETE /diagramas/<id>/
+    Elimina un diagrama de clases.
+    """
+    queryset = DiagramaClase.objects.all()
+    serializer_class = DiagramaClaseSerializer
+    permission_classes = [AllowAny]

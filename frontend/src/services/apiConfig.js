@@ -8,6 +8,7 @@ export const API_ENDPOINTS = {
   LOGIN: '/api/token/',           // JWT login endpoint
   REFRESH: '/api/token/refresh/', // JWT refresh endpoint
   PROYECTOS: '/api/proyectos/',
+  DIAGRAMAS: '/api/diagramas/', // <-- Agregado endpoint de diagramas
   USER_ME: '/api/me/',
 };
 
