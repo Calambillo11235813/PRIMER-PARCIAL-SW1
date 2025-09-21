@@ -1,43 +1,34 @@
-import React, { useCallback } from 'react';
+import React from 'react';
+import ClaseNode from '../ClaseNode';
 
-export const ClaseNodeWidget = ({ engine, node }) => {
-  const { nombre, atributos, metodos, esAbstracta } = node.getOptions();
-
-  const onEdit = useCallback(() => {
-    engine.fireEvent({ node }, 'editClase');
-  }, [engine, node]);
+const ClaseNodeWidget = ({ node, engine }) => {
+  console.log('DEBUG ClaseNodeWidget: Renderizando widget funcional para nodo:', node.getOptions().nombre);
 
   return (
-    <div style={{ background: 'yellow', border: '4px solid red', minWidth: 200, minHeight: 80 }}>
-      {/* Compartimento del Nombre */}
-      <div 
-        className="font-bold text-center py-2 border-b-2 border-green-700 bg-green-100 text-green-900"
-        onClick={onEdit}
-      >
-        {esAbstracta ? <i>{nombre}</i> : nombre}
-      </div>
-      
-      {/* Compartimento de Atributos */}
-      {atributos && atributos.length > 0 && (
-        <div className="py-2 border-b border-green-200 bg-white">
-          <ul className="ml-2 text-green-800">
-            {atributos.map((attr, idx) => (
-              <li key={idx}>+ {attr}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      
-      {/* Compartimento de Métodos */}
-      {metodos && metodos.length > 0 && (
-        <div className="py-2 bg-white">
-          <ul className="ml-2 text-green-700">
-            {metodos.map((method, idx) => (
-              <li key={idx}># {method}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+    <div
+      style={{
+        position: 'absolute',
+        left: node.getPosition().x,
+        top: node.getPosition().y,
+        background: 'white',
+        border: '1px solid black',
+        borderRadius: '5px',
+        padding: '10px',
+        cursor: 'pointer',
+        zIndex: 10
+      }}
+      onClick={() => {
+        console.log('DEBUG ClaseNodeWidget: Clic en nodo');
+        node.fireEvent({}, 'onEdit');
+      }}
+    >
+      <ClaseNode
+        clase={node.getOptions()}
+        onEdit={() => node.fireEvent({}, 'onEdit')}
+        isAbstract={node.getOptions().esAbstracta}
+      />
     </div>
   );
 };
+
+export default ClaseNodeWidget;

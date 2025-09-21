@@ -24,6 +24,7 @@
    - Navegación entre login y registro usando React Router.
    - Corrección de duplicidad en la barra de navegación y mejora de UX.
    - Registro de usuario funcional y redirección automática tras registro.
+   - **Editor Visual para Diagramas UML**: Implementación completa del editor de diagramas usando React Flow. Incluye nodos custom para clases UML (ClaseNodeRF.jsx), drag-and-drop funcional desde Sidebar, edición de clases vía modal (EditarClaseModal.jsx), y carga de diagramas existentes desde el backend. Migración exitosa de React Diagrams a React Flow para mejor estabilidad y facilidad de uso, resolviendo errores de rendering y permitiendo diseño colaborativo básico.
 
 ---
 
@@ -44,6 +45,7 @@
 - Autenticación y gestión básica de usuarios funcional.
 - Registro de usuarios y navegación entre páginas funcionando.
 - Interfaz de usuario intuitiva y conectada al backend.
+- **Editor visual para diagramas UML operativo**: Permite arrastrar clases, editar propiedades y cargar diagramas existentes, cumpliendo con CU4 y CU6.
 - Listo para avanzar con módulos colaborativos, panel de proyectos y diagramas UML.
 
 ---
@@ -67,4 +69,5 @@ Estos estándares aplican a backend (Django), frontend (React) y cualquier integ
 - **Flujo de login y navegación corregido:** El frontend actualiza correctamente el estado de usuario tras login y permite la navegación entre Dashboard, Perfil y Registro.
 - **Validación y manejo de errores mejorados:** El frontend muestra mensajes claros en caso de error de autenticación y gestiona el estado de carga y sesión de manera robusta.
 - **Documentación y estructura de archivos revisada:** Todos los cambios y archivos nuevos están documentados y ubicados según los estándares definidos.
+- **Editor visual funcional:** Implementación exitosa del editor de diagramas UML con React Flow, incluyendo drag-and-drop, edición modal y carga de datos. Resueltos errores de rendering y compatibilidad, mejorando la facilidad de uso y mantenibilidad del frontend.
 

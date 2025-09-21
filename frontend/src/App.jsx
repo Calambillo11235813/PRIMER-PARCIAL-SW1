@@ -10,6 +10,7 @@ import Dashboard from './components/Dashboard';
 import ListaProyectos from './components/Proyecto/ListaProyectos';
 import EditorDiagrama from './components/EditorVisual/EditorDiagrama';
 import ListaDiagramas from './components/Proyecto/Diagramas/ListaDiagramas';
+import EditorDiagramaPage from './pages/EditorDiagramaPage';  // Nuevo import
 
 function App() {
   const [user, setUser] = useState(null);
@@ -89,40 +90,38 @@ function App() {
   }
 
   return (
-    
-      <div className="min-h-screen bg-green-50">
-        {user && <Navbar usuario={user} onLogout={handleLogout} onIrPerfil={handleIrPerfil} />}
-        <main className="container mx-auto p-4 mt-6">
-          <Routes>
-            <Route
-              path="/"
-              element={
-                !user ? (
-                  <Login onLogin={handleLogin} onMostrarRegistro={() => setMostrarRegistro(true)} />
-                ) : mostrarPerfil ? (
-                  <div>
-                    <button
-                      onClick={handleVolver}
-                      className="mb-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
-                    >
-                      Volver
-                    </button>
-                    <PerfilUsuario usuario={user} />
-                  </div>
-                ) : (
-                  <Dashboard user={user} onIrPerfil={handleIrPerfil} />
-                )
-              }
-            />
-            <Route path="/registro" element={<Registro onVolver={handleVolverLogin} />} />
-            <Route path="/proyectos" element={<ListaProyectos />} />
-            <Route path="/editor" element={<EditorDiagrama />} />
-            <Route path="/diagramas" element={<ListaDiagramas />} />
-            <Route path="/editor/:idDiagrama" element={<EditorDiagrama />} />
-          </Routes>
-        </main>
-      </div>
-  
+    <div className="min-h-screen bg-green-50">
+      {user && <Navbar usuario={user} onLogout={handleLogout} onIrPerfil={handleIrPerfil} />}
+      <main className="container mx-auto p-4 mt-6">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              !user ? (
+                <Login onLogin={handleLogin} onMostrarRegistro={() => setMostrarRegistro(true)} />
+              ) : mostrarPerfil ? (
+                <div>
+                  <button
+                    onClick={handleVolver}
+                    className="mb-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
+                  >
+                    Volver
+                  </button>
+                  <PerfilUsuario usuario={user} />
+                </div>
+              ) : (
+                <Dashboard user={user} onIrPerfil={handleIrPerfil} />
+              )
+            }
+          />
+          <Route path="/registro" element={<Registro onVolver={handleVolverLogin} />} />
+          <Route path="/proyectos" element={<ListaProyectos />} />
+          <Route path="/editor" element={<EditorDiagramaPage />} />  {/* Cambiado: usa page para manejo de carga */}
+          <Route path="/diagramas" element={<ListaDiagramas />} />
+          <Route path="/editor/:idDiagrama" element={<EditorDiagramaPage />} />  {/* Cambiado: usa page */}
+        </Routes>
+      </main>
+    </div>
   );
 }
 

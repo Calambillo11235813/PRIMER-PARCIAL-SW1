@@ -1,17 +1,18 @@
-import { ClaseNodeWidget } from './ClaseNodeWidget';
-import { ClaseNodeModel } from './ClaseNodeModel';
 import { AbstractReactFactory } from '@projectstorm/react-canvas-core';
+import { ClaseNodeModel } from './ClaseNodeModel';
+import ClaseNodeWidget from './ClaseNodeWidget';  // Cambia a default import
 
 export class ClaseNodeFactory extends AbstractReactFactory {
   constructor() {
     super('clase');
   }
 
-  generateReactWidget(event) {
-    return <ClaseNodeWidget engine={this.engine} node={event.model} />;
-  }
-
   generateModel(event) {
     return new ClaseNodeModel();
+  }
+
+  generateReactWidget(event) {
+    console.log('DEBUG ClaseNodeFactory: Generando widget de clase');
+    return <ClaseNodeWidget node={event.model} engine={this.engine} />;
   }
 }

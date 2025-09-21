@@ -6,20 +6,33 @@ const elementos = [
   // Puedes agregar más tipos aquí
 ];
 
-const Sidebar = ({ onDragStart }) => (
-  <div className="w-40 bg-gray-100 p-3 border-r border-gray-300 h-full">
-    <h3 className="font-bold text-gray-700 mb-3">Clases (UML)</h3>
-    {elementos.map((el, idx) => (
+const Sidebar = ({ onDragStart }) => {
+  return (
+    <div className="w-64 bg-white p-4 border-r">
+      <h3 className="text-lg font-bold mb-4">Elementos UML</h3>
       <div
-        key={idx}
         draggable
-        onDragStart={e => onDragStart(e, el.tipo)}
-        className="mb-2 p-2 bg-white rounded shadow cursor-move hover:bg-blue-50"
+        onDragStart={(e) => {
+          console.log('DEBUG Sidebar: Drag start para Clase');  // Log
+          onDragStart(e, 'Clase');
+        }}
+        className="p-2 bg-blue-100 rounded mb-2 cursor-move"
       >
-        {el.label}
+        Clase
       </div>
-    ))}
-  </div>
-);
+      <div
+        draggable
+        onDragStart={(e) => {
+          console.log('DEBUG Sidebar: Drag start para Interface');  // Log
+          onDragStart(e, 'Interface');
+        }}
+        className="p-2 bg-green-100 rounded cursor-move"
+      >
+        Interface
+      </div>
+      {/* ... (resto) */}
+    </div>
+  );
+};
 
 export default Sidebar;
