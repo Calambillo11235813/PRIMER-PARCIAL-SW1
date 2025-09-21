@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { obtenerDiagramas, crearDiagrama, eliminarDiagrama } from '../../../services/diagramService';
 import EditorDiagrama from '../../EditorVisual/EditorDiagrama';
 import { actualizarDiagrama } from '../../../services/diagramService';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const ListaDiagramas = ({ idProyecto }) => {
+  const location = useLocation();
+  const effectiveProjectId = idProyecto || location.state?.idProyecto || null;
   const [diagramas, setDiagramas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -20,8 +22,8 @@ const ListaDiagramas = ({ idProyecto }) => {
   const cargarDiagramas = async () => {
     setCargando(true);
     const resp = await obtenerDiagramas();
-    // Filtra los diagramas por proyecto
-    const filtrados = (resp.data || []).filter(d => d.proyecto === idProyecto);
+    // Filtra los diagramas por proyecto (usa effectiveProjectId)
+    const filtrados = (resp.data || []).filter(d => d.proyecto === effectiveProjectId);
     setDiagramas(filtrados);
     setCargando(false);
   };
@@ -29,7 +31,7 @@ const ListaDiagramas = ({ idProyecto }) => {
   useEffect(() => {
     cargarDiagramas();
     // eslint-disable-next-line
-  }, [idProyecto]);
+  }, [effectiveProjectId]);
 
   const handleCrear = async (e) => {
     e.preventDefault();

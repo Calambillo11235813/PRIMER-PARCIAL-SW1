@@ -352,40 +352,47 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
       <Sidebar onDragStart={(e, tipo) => e.dataTransfer.setData('tipoElemento', tipo)} />
       <div
         ref={reactFlowWrapper}
-        style={{
-          height: 'calc(100vh - 120px)',
-          width: '100%',
-          position: 'relative',
-          flex: 1,
-          minHeight: 420,
-        }}
+        className="editor-fullscreen"
+        style={{ flex: 1, minHeight: 420 }}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
       >
-        {/* Controles: Guardar + Undo/Redo + toast */}
-        <div style={{ position: 'absolute', right: 12, top: 12, zIndex: 60, display: 'flex', gap: 8 }}>
+        {/* Controles: Guardar + Undo/Redo + toast (fijos en la ventana) */}
+        <div style={{
+          position: 'fixed',
+          right: 20,
+          top: 'calc(var(--header-height) + 12px)',
+          zIndex: 999,
+          display: 'flex',
+          gap: 10,
+          alignItems: 'center',
+        }}>
           <button
             onClick={handleGuardarDiagrama}
-            className="bg-green-600 hover:bg-green-700 text-white text-sm px-3 py-1 rounded shadow"
+            // Aumenté tamaño de fuente, padding y altura
+            className="bg-green-600 hover:bg-green-700 text-white text-lg px-5 py-2 rounded-md shadow-md"
             title="Guardar diagrama"
             disabled={isSaving}
+            style={{ minWidth: 120, height: 44 }}
           >
             {isSaving ? 'Guardando...' : 'Guardar'}
           </button>
 
           <button
             onClick={handleUndo}
-            className="bg-white border px-2 py-1 rounded"
+            className="bg-white border px-3 py-2 rounded"
             title="Deshacer"
             disabled={historyPast.length === 0}
+            style={{ height: 44 }}
           >
             ↶
           </button>
           <button
             onClick={handleRedo}
-            className="bg-white border px-2 py-1 rounded"
+            className="bg-white border px-3 py-2 rounded"
             title="Rehacer"
             disabled={historyFuture.length === 0}
+            style={{ height: 44 }}
           >
             ↷
           </button>

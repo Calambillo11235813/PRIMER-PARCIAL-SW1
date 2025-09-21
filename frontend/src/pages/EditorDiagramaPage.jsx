@@ -1,7 +1,8 @@
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import EditorDiagrama from '../components/EditorVisual/EditorDiagrama';
 import { obtenerDiagramaPorId } from '../services/diagramService';  // Cambiado: importa el servicio correcto
+import Sidebar from '../components/EditorVisual/Sidebar'; // Asegúrate de que la ruta sea correcta
 
 const EditorDiagramaPage = () => {
   const { idDiagrama } = useParams();
@@ -44,28 +45,31 @@ const EditorDiagramaPage = () => {
   if (error) return <div className="p-8 text-red-600">{error}</div>;
 
   return (
-    <div className="min-h-screen bg-green-50">
-      <button
-        className="m-4 bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
-        onClick={() => navigate('/diagramas')}
-      >
-        Volver
-      </button>
-      <EditorDiagrama
-        estructuraInicial={estructura}
-        projectId={projectId}
-        diagramaId={diagramaId}
-        onGuardar={(respuestaBackend) => {
-          // cuando se crea por primera vez, el backend devuelve el id: fijarlo en el padre
-          if (respuestaBackend && respuestaBackend.id) {
-            setDiagramaId(respuestaBackend.id);
+    <div className="bg-green-50" style={{ minHeight: '100vh', position: 'relative', width: '100vw', padding: 0, margin: 0 }}>
+      {/* Quitamos botón Volver aquí; Sidebar lo maneja */}
+      <div style={{ display: 'flex', width: '100%', height: '100%' }}>
+        {/* Sidebar se renderiza normalmente; pasamos onBack apuntando a la lista de diagramas del proyecto */}
+        <Sidebar onBack={() => {
+          if (projectId) {
+            // ruta explícita a la lista de diagramas del proyecto
+            navigate(`/proyectos/${projectId}/diagramas`);
+          } else {
+            // fallback: volver en el historial
+            navigate(-1);
           }
-          // si el backend devuelve la estructura actualizada, sincronizarla
-          if (respuestaBackend && respuestaBackend.estructura) {
-            setEstructura(respuestaBackend.estructura);
-          }
-        }}
-      />
+        }} />
+        <div style={{ flex: 1, minHeight: '100vh' }}>
+          <EditorDiagrama
+            estructuraInicial={estructura}
+            projectId={projectId}
+            diagramaId={diagramaId}
+            onGuardar={(respuestaBackend) => {
+              if (respuestaBackend && respuestaBackend.id) setDiagramaId(respuestaBackend.id);
+              if (respuestaBackend && respuestaBackend.estructura) setEstructura(respuestaBackend.estructura);
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 };

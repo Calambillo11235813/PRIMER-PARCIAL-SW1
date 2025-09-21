@@ -92,7 +92,7 @@ function App() {
   return (
     <div className="min-h-screen bg-green-50">
       {user && <Navbar usuario={user} onLogout={handleLogout} onIrPerfil={handleIrPerfil} />}
-      <main className="container mx-auto p-4 mt-6">
+      <main className="container mx-auto p-4">
         <Routes>
           <Route
             path="/"

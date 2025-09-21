@@ -104,3 +104,72 @@ html, body, #root {
   height: calc(100vh - 120px); /* ajustar según alto de header/topbar */
   min-height: 420px;
 }
+
+/* ancho fijo del sidebar - ajustar si tu sidebar tiene otro width */
+:root {
+  --editor-sidebar-width: 320px; /* sincroniza si cambias el ancho */
+  --header-height: 72px;
+}
+
+/* Sidebar fijo al borde izquierdo, bajo el header */
+.editor-sidebar {
+  position: fixed;
+  left: 0;
+  top: var(--header-height);
+  width: var(--editor-sidebar-width);
+  height: calc(100vh - var(--header-height));
+  z-index: 60;
+  box-shadow: 0 0 0 rgba(0,0,0,0); /* no alterar sombra si ya la tienes */
+  padding: 1rem; /* mantén el padding interno del sidebar que ya usabas */
+  background: inherit; /* conserva el tema */
+}
+
+/* Hacer que el área del editor / canvas deje espacio para el sidebar */
+.editor-full-canvas,
+.editor-canvas-wrapper {
+  margin-left: var(--editor-sidebar-width); /* mover canvas a la derecha del sidebar fijo */
+  width: calc(100% - var(--editor-sidebar-width));
+  min-height: calc(100vh - var(--header-height));
+}
+
+/* Mantener el espacio para el sidebar (si aplicas wrapper con margin-left) */
+.editor-canvas-wrapper {
+  margin-left: var(--editor-sidebar-width);
+  width: calc(100% - var(--editor-sidebar-width));
+}
+
+/* Botones con sombra ligera para destacarlos sobre el fondo */
+.fixed-control-btn {
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+/* Botón "Volver" pegado al borde derecho del sidebar (punto rojo) */
+.sidebar-back-button {
+  position: absolute;
+  right: -60px;               /* desplaza hacia la derecha fuera del sidebar */
+  top: 12px;                  /* distancia desde la parte superior del sidebar */
+  z-index: 80;
+  background: #e5e7eb;        /* gris claro */
+  color: #111827;             /* texto oscuro */
+  border: 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+  font-weight: 500;
+}
+.sidebar-back-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+}
+
+/* Si el sidebar se colapsa, ocultar el botón (ya controlado por JSX, esto es por seguridad) */
+.editor-sidebar .sidebar-back-button {
+  display: inline-block;
+}
+
+/* Ajuste para pantallas pequeñas si es necesario */
+@media (max-width: 900px) {
+  .sidebar-back-button { display: none; }
+}
