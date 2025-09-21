@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { obtenerDiagramaPorId } from '../../services/diagramService';
+import { obtenerDiagramaPorId, actualizarDiagrama } from '../../../services/diagramService';
+import EditorDiagrama from './EditorDiagrama';
 
-const ObtenerDiagrama = ({ idDiagrama, onVolver }) => {
+const ObtenerDiagrama = ({ idDiagrama, onVolver, recargar }) => {
   const [diagrama, setDiagrama] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [editorAbierto, setEditorAbierto] = useState(false);
 
   useEffect(() => {
     const cargar = async () => {
@@ -12,11 +14,30 @@ const ObtenerDiagrama = ({ idDiagrama, onVolver }) => {
       setDiagrama(resp.data);
       setCargando(false);
     };
-    if (idDiagrama) cargar();
-  }, [idDiagrama]);
+    if (idDiagrama && !editorAbierto) cargar();
+  }, [idDiagrama, editorAbierto]);
+
+  const handleGuardarEstructura = async (estructuraNueva) => {
+    if (!diagrama) return;
+    await actualizarDiagrama(idDiagrama, { ...diagrama, estructura: estructuraNueva });
+    setEditorAbierto(false);
+    if (recargar) recargar();
+    // Recarga el diagrama actualizado
+    const resp = await obtenerDiagramaPorId(idDiagrama);
+    setDiagrama(resp.data);
+  };
 
   if (cargando) return <div>Cargando diagrama...</div>;
   if (!diagrama) return <div>No se encontró el diagrama.</div>;
+
+  if (editorAbierto) {
+    return (
+      <EditorDiagrama
+        estructuraInicial={diagrama.estructura}
+        onGuardar={handleGuardarEstructura}
+      />
+    );
+  }
 
   return (
     <div className="bg-white rounded shadow p-6 max-w-xl mx-auto mt-6">
@@ -28,6 +49,12 @@ const ObtenerDiagrama = ({ idDiagrama, onVolver }) => {
           {JSON.stringify(diagrama.estructura, null, 2)}
         </pre>
       </div>
+      <button
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mr-2"
+        onClick={() => setEditorAbierto(true)}
+      >
+        Editar Visualmente
+      </button>
       <button
         className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
         onClick={onVolver}

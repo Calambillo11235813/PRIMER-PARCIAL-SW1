@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { proyectoService } from '../../services/proyectoService';
-import ListaDiagramas from './ListaDiagramas';
+import ListaDiagramas from './Diagramas/ListaDiagramas';
 
 const ObtenerProyecto = ({ idProyecto, onVolver }) => {
   const [proyecto, setProyecto] = useState(null);

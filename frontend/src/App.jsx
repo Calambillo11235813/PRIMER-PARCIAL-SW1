@@ -1,19 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { getCurrentUser, logout, login } from './services/authService';
 import { apiClient, API_ENDPOINTS } from './services/apiConfig';
-import Login from './components/Login';
+import Login from './pages/Login';
 import Navbar from './components/Navbar';
 import PerfilUsuario from './pages/PerfilUsuario';
-import Registro from './components/Registro';
+import Registro from './pages/Registro';
 import Dashboard from './components/Dashboard';
 import ListaProyectos from './components/Proyecto/ListaProyectos';
+import EditorDiagrama from './components/EditorVisual/EditorDiagrama';
+import ListaDiagramas from './components/Proyecto/Diagramas/ListaDiagramas';
 
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mostrarPerfil, setMostrarPerfil] = useState(false);
   const [mostrarRegistro, setMostrarRegistro] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Si tienes CSRF en el backend, puedes eliminar esta línea con JWT puro
@@ -86,7 +89,7 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
+    
       <div className="min-h-screen bg-green-50">
         {user && <Navbar usuario={user} onLogout={handleLogout} onIrPerfil={handleIrPerfil} />}
         <main className="container mx-auto p-4 mt-6">
@@ -113,10 +116,13 @@ function App() {
             />
             <Route path="/registro" element={<Registro onVolver={handleVolverLogin} />} />
             <Route path="/proyectos" element={<ListaProyectos />} />
+            <Route path="/editor" element={<EditorDiagrama />} />
+            <Route path="/diagramas" element={<ListaDiagramas />} />
+            <Route path="/editor/:idDiagrama" element={<EditorDiagrama />} />
           </Routes>
         </main>
       </div>
-    </BrowserRouter>
+  
   );
 }
 

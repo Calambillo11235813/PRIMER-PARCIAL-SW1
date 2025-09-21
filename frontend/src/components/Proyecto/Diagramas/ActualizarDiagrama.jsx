@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { obtenerDiagramaPorId, actualizarDiagrama } from '../../services/diagramService';
+import { obtenerDiagramaPorId, actualizarDiagrama } from '../../../services/diagramService';
 
 const ActualizarDiagrama = ({ idDiagrama, onActualizado, onCancelar }) => {
   const [datos, setDatos] = useState({ nombre: '', descripcion: '', estructura: {} });
