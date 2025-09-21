@@ -6,6 +6,8 @@ import { obtenerDiagramaPorId } from '../services/diagramService';  // Cambiado:
 const EditorDiagramaPage = () => {
   const { idDiagrama } = useParams();
   const [estructura, setEstructura] = React.useState(null);
+  const [diagramaId, setDiagramaId] = React.useState(null);
+  const [projectId, setProjectId] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
   const navigate = useNavigate();
@@ -14,23 +16,23 @@ const EditorDiagramaPage = () => {
     const cargar = async () => {
       try {
         if (idDiagrama) {
-          // Si hay ID, carga el diagrama específico
           const resp = await obtenerDiagramaPorId(idDiagrama);
           console.log('Diagrama recibido:', resp.data);
-          // Verifica si la estructura existe y tiene datos
+          // guardar estructura y projectId por separado
           if (resp.data && resp.data.estructura && Object.keys(resp.data.estructura).length > 0) {
             setEstructura(resp.data.estructura);
           } else {
             setEstructura({ clases: [], relaciones: [] });
           }
+          setProjectId(resp.data.proyecto || resp.data.proyecto_id || null);
+          setDiagramaId(resp.data.id || null);
         } else {
-          // Si no hay ID (ruta /editor), inicia vacío
           setEstructura({ clases: [], relaciones: [] });
         }
       } catch (err) {
         console.error('Error cargando diagrama:', err);
         setError('No se pudo cargar el diagrama. Verifica el ID.');
-        setEstructura({ clases: [], relaciones: [] });  // Fallback
+        setEstructura({ clases: [], relaciones: [] });
       } finally {
         setLoading(false);
       }
@@ -51,7 +53,18 @@ const EditorDiagramaPage = () => {
       </button>
       <EditorDiagrama
         estructuraInicial={estructura}
-        onGuardar={() => {}}
+        projectId={projectId}
+        diagramaId={diagramaId}
+        onGuardar={(respuestaBackend) => {
+          // cuando se crea por primera vez, el backend devuelve el id: fijarlo en el padre
+          if (respuestaBackend && respuestaBackend.id) {
+            setDiagramaId(respuestaBackend.id);
+          }
+          // si el backend devuelve la estructura actualizada, sincronizarla
+          if (respuestaBackend && respuestaBackend.estructura) {
+            setEstructura(respuestaBackend.estructura);
+          }
+        }}
       />
     </div>
   );

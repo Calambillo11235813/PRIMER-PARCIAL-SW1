@@ -29,10 +29,18 @@ export const crearDiagrama = async (datosDiagrama) => {
 /**
  * Actualiza un diagrama existente
  * @param {number|string} idDiagrama
- * @param {Object} datosDiagrama
+ * @param {Object} datosDiagrama  // puede ser { estructura: {...} } o directamente la estructura
  */
 export const actualizarDiagrama = async (idDiagrama, datosDiagrama) => {
-  return await apiClient.put(`${API_ENDPOINTS.DIAGRAMAS}${idDiagrama}/`, datosDiagrama);
+  // Aceptar ambos formatos: si pasaron { estructura: ... } usarlo; si pasaron la estructura directamente, envolverla.
+  const estructuraPayload = datosDiagrama && datosDiagrama.estructura
+    ? datosDiagrama.estructura
+    : datosDiagrama || { clases: [], relaciones: [] };
+
+  const payload = { estructura: estructuraPayload };
+
+  // Enviar solo el campo estructura al backend
+  return await apiClient.put(`${API_ENDPOINTS.DIAGRAMAS}${idDiagrama}/`, payload);
 };
 
 /**

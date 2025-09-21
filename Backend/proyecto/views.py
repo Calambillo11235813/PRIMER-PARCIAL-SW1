@@ -112,3 +112,12 @@ class DiagramaClaseDetalleActualizarEliminar(generics.RetrieveUpdateDestroyAPIVi
     queryset = DiagramaClase.objects.all()
     serializer_class = DiagramaClaseSerializer
     permission_classes = [AllowAny]
+
+    # NUEVO: tratar PUT como actualización parcial para permitir enviar solo "estructura"
+    def put(self, request, *args, **kwargs):
+        """
+        Permitimos que PUT actúe como partial_update para que el cliente pueda enviar
+        únicamente el campo 'estructura' (clases/relaciones) sin que fallen las validaciones
+        de campos obligatorios que no se estén modificando.
+        """
+        return self.partial_update(request, *args, **kwargs)

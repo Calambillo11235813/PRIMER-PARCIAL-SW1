@@ -150,12 +150,14 @@ const ListaDiagramas = ({ idProyecto }) => {
       {diagramaEditando && (
         (() => {
           const estructura = diagramas.find(d => d.id === diagramaEditando)?.estructura;
+          const proyectoDelDiagrama = diagramas.find(d => d.id === diagramaEditando)?.proyecto || idProyecto;
           console.log('Estructura enviada a EditorDiagrama:', estructura);
           return (
             <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
               <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-6xl relative">
                 <EditorDiagrama
                   estructuraInicial={estructura}
+                  projectId={proyectoDelDiagrama}
                   onGuardar={handleGuardarEdicion}
                 />
                 <button
