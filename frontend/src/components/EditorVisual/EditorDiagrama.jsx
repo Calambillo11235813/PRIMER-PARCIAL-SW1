@@ -1,14 +1,55 @@
-import React, { useCallback, useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { ReactFlow, addEdge, useEdgesState, useNodesState, Controls, Background } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import ClaseNodeRF from './ClaseNodeRF.jsx';
-// import Sidebar from './Sidebar'; // Eliminado: Sidebar se renderiza en la página padre
+import RelacionNode from './RelacionNode.jsx';
 import EditarClaseModal from './EditarClaseModal';
 import { crearDiagrama, actualizarDiagrama } from '../../services/diagramService';
+import ContextMenu from './ContextMenu';
 
-const nodeTypes = { claseNode: ClaseNodeRF };
+// Hook personalizado para manejar el historial
+const useDiagramHistory = () => {
+  const [past, setPast] = useState([]);
+  const [future, setFuture] = useState([]);
 
-// En la firma del componente acepta opcionalmente projectId (prop desde la página padre)
+  const saveState = (nodes, edges) => {
+    if (nodes && edges) {
+      setPast(prev => [...prev, { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) }]);
+      setFuture([]);
+    }
+  };
+
+  const undo = (currentNodes, currentEdges) => {
+    if (past.length === 0) return null;
+
+    const previousState = past[past.length - 1];
+    setFuture(prev => [{ nodes: JSON.parse(JSON.stringify(currentNodes)), edges: JSON.parse(JSON.stringify(currentEdges)) }, ...prev]);
+    setPast(prev => prev.slice(0, -1));
+
+    return previousState;
+  };
+
+  const redo = () => {
+    if (future.length === 0) return null;
+
+    const nextState = future[0];
+    setPast(prev => [...prev, nextState]);
+    setFuture(prev => prev.slice(1));
+
+    return nextState;
+  };
+
+  return {
+    past,
+    future,
+    saveState,
+    undo,
+    redo,
+    canUndo: past.length > 0,
+    canRedo: future.length > 0
+  };
+};
+
 const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagramaId = null }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -18,25 +59,18 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
 
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
-  const lastDropRef = useRef(0); // evita duplicados (timestamp)
+  const lastDropRef = useRef(0);
 
   // Context menu state
-  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, node: null });
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, node: null, edge: null });
 
-  // History (undo/redo)
-  const [historyPast, setHistoryPast] = useState([]);
-  const [historyFuture, setHistoryFuture] = useState([]);
-  const nodesRef = useRef(nodes);
-  const edgesRef = useRef(edges);
+  // Usar el hook personalizado para historial
+  const { past, future, saveState, undo: historyUndo, redo: historyRedo, canUndo, canRedo } = useDiagramHistory();
 
   // Saving / errors / toast
   const [isSaving, setIsSaving] = useState(false);
-  const [toast, setToast] = useState(null); // { type: 'success'|'error', message }
+  const [toast, setToast] = useState(null);
   const [validationErrors, setValidationErrors] = useState(null);
-
-  // Update refs when nodes/edges change
-  useEffect(() => { nodesRef.current = nodes; }, [nodes]);
-  useEffect(() => { edgesRef.current = edges; }, [edges]);
 
   // Carga inicial
   useEffect(() => {
@@ -47,12 +81,13 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
         id: clase.id || `node-${idx}`,
         type: 'claseNode',
         position: clase.position || { x: 100 + idx * 200, y: 100 },
-        data: clase
+        data: { ...clase, label: clase.nombre || `Clase ${idx + 1}` }
       }));
       setNodes(initialNodes);
       console.log('DEBUG: Nodos iniciales cargados desde estructuraInicial. Total:', initialNodes.length);
     } else {
       console.warn('No hay estructura inicial; editor vacío.');
+      setNodes([]);
     }
 
     if (estructuraInicial?.relaciones) {
@@ -60,57 +95,53 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
         id: r.id || `edge-${idx}`,
         source: r.source,
         target: r.target,
-        data: { tipo: r.tipo, label: r.label },
+        type: 'relacionNode',
+        data: {
+          tipo: r.tipo || 'asociacion',
+          multiplicidadSource: r.multiplicidadSource || '1',
+          multiplicidadTarget: r.multiplicidadTarget || 'N',
+          label: r.label || null,
+        },
       }));
       setEdges(initialEdges);
       console.log('DEBUG: Aristas iniciales cargadas. Total:', initialEdges.length);
+    } else {
+      setEdges([]);
     }
 
-    // limpiar historial al cargar nueva estructura
-    setHistoryPast([]);
-    setHistoryFuture([]);
     setIsLoading(false);
-    console.log('DEBUG: Estado de carga actualizado a false.');
   }, [estructuraInicial, setNodes, setEdges]);
 
+  // Guardar estado en historial cuando cambian nodes o edges
+  useEffect(() => {
+    if (nodes.length > 0 || edges.length > 0) {
+      saveState(nodes, edges);
+    }
+  }, [nodes, edges]);
+
   const onConnect = useCallback((params) => {
-    // record history before creating edge
-    recordHistoryBeforeChange();
-    setEdges((eds) => addEdge(params, eds));
-  }, []);
+    // Guardar estado antes del cambio
+    saveState(nodes, edges);
 
-  // History helpers
-  const recordHistoryBeforeChange = () => {
-    const snapshot = { nodes: nodesRef.current, edges: edgesRef.current };
-    setHistoryPast((prev) => {
-      const next = prev.concat([snapshot]);
-      // keep last 50
-      return next.length > 50 ? next.slice(next.length - 50) : next;
-    });
-    setHistoryFuture([]);
-  };
-
-  const handleUndo = () => {
-    if (historyPast.length === 0) return;
-    const last = historyPast[historyPast.length - 1];
-    const current = { nodes: nodesRef.current, edges: edgesRef.current };
-    setHistoryFuture((f) => f.concat([current]));
-    setHistoryPast((p) => p.slice(0, p.length - 1));
-    setNodes(last.nodes);
-    setEdges(last.edges);
-    setToast({ type: 'info', message: 'Deshacer aplicado' });
-  };
-
-  const handleRedo = () => {
-    if (historyFuture.length === 0) return;
-    const next = historyFuture[historyFuture.length - 1];
-    const current = { nodes: nodesRef.current, edges: edgesRef.current };
-    setHistoryPast((p) => p.concat([current]));
-    setHistoryFuture((f) => f.slice(0, f.length - 1));
-    setNodes(next.nodes);
-    setEdges(next.edges);
-    setToast({ type: 'info', message: 'Rehacer aplicado' });
-  };
+    //Validar que no sea una conexion consigo mismo 
+    if (params.source === params.target) {
+      setToast({ type: 'error', message: 'No se puede conectar un nodo consigo mismo.' });
+      return;
+    }
+    const nuevaRelacion = {
+      ...params,
+      id: `edge-${params.source}-${params.target}-${Date.now()}`,
+      type: 'relacionNode',
+      data: {
+        tipo: 'asociacion',
+        multiplicidadSource: '1',
+        multiplicidadTarget: 'N',
+        label: 'asociación',
+      },
+    };
+    console.log('DEBUG: Creando nueva relación:', nuevaRelacion);
+    setEdges((eds) => addEdge(nuevaRelacion, eds));
+  }, [nodes, edges]);
 
   // Drag handlers para canvas
   const handleDragOver = (event) => {
@@ -118,53 +149,59 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     event.dataTransfer.dropEffect = 'move';
   };
 
-  // Drop handler: coloca el nodo exactamente donde está el cursor (robusto ante overlays/transform)
+  // Drop handler mejorado con corrección de posición
   const handleDrop = (event) => {
     event.preventDefault();
     console.log('Evento onDrop disparado:', event);
 
-    // Prevenir eventos duplicados usando un timestamp
+    // Prevenir eventos duplicados
     const now = Date.now();
-    if (now - lastDropRef.current < 300) { // Aumentar el umbral a 300ms
+    if (now - lastDropRef.current < 300) {
       console.warn('Evento duplicado detectado, ignorando...');
       return;
     }
     lastDropRef.current = now;
 
-    // Obtener el tipo de nodo arrastrado
     const tipoNodo = event.dataTransfer.getData('application/reactflow');
     if (!tipoNodo) {
       console.warn('No se pudo obtener el tipo de nodo desde el evento de arrastre.');
       return;
     }
 
-    // Calcular posición en el canvas manualmente, ajustando por desplazamiento y escalado
+    // Calcular posición CORREGIDA (considerando scroll y transformaciones)
     const bounds = reactFlowWrapper.current.getBoundingClientRect();
-    const scale = reactFlowInstance?.zoom || 1; // Obtener el escalado actual del canvas
+    const scale = reactFlowInstance?.zoom || 1;
     const sidebarWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--editor-sidebar-width'), 10) || 0;
 
     const posicion = {
-      x: (event.clientX - bounds.left - sidebarWidth) / scale,
-      y: (event.clientY - bounds.top) / scale,
+      x: (event.clientX - bounds.left - sidebarWidth + window.scrollX) / scale,
+      y: (event.clientY - bounds.top + window.scrollY) / scale,
     };
 
-    console.log('Posición calculada ajustada:', posicion);
+    console.log('Posición calculada corregida:', posicion);
+
+    // Guardar estado antes del cambio
+    saveState(nodes, edges);
 
     const nuevoNodo = {
-      id: `${tipoNodo}-${Date.now()}`, // ID único para el nodo
-      type: tipoNodo, // Tipo de nodo (e.g., claseNode)
-      position: posicion, // Posición calculada manualmente
-      data: { label: `Nuevo ${tipoNodo}` }, // Datos iniciales del nodo
+      id: `${tipoNodo}-${Date.now()}`,
+      type: tipoNodo,
+      position: posicion,
+      data: {
+        label: `Nueva ${tipoNodo === 'claseNode' ? 'Clase' : 'Interface'}`,
+        nombre: `Nueva${tipoNodo === 'claseNode' ? 'Clase' : 'Interface'}`,
+        atributos: [],
+        metodos: []
+      },
     };
 
-    setNodes((nds) => [...nds, nuevoNodo]); // Agregar nodo al estado
-    recordHistoryBeforeChange(); // Registrar en el historial
+    setNodes((nds) => [...nds, nuevoNodo]);
   };
 
-  // node interactions
+  // Node interactions
   const handleNodeClick = (event, node) => {
     setClaseEditando(node);
-    if (contextMenu.visible) setContextMenu({ visible: false, x: 0, y: 0, node: null });
+    if (contextMenu.visible) setContextMenu({ visible: false, x: 0, y: 0, node: null, edge: null });
   };
 
   const handleNodeDoubleClick = (event, node) => {
@@ -172,33 +209,59 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     event.stopPropagation();
     setClaseEditando(node);
     setModalAbierto(true);
-    if (contextMenu.visible) setContextMenu({ visible: false, x: 0, y: 0, node: null });
+    if (contextMenu.visible) setContextMenu({ visible: false, x: 0, y: 0, node: null, edge: null });
   };
 
   const handleNodeContextMenu = (event, node) => {
     event.preventDefault();
     event.stopPropagation();
     const bounds = reactFlowWrapper.current ? reactFlowWrapper.current.getBoundingClientRect() : { left: 0, top: 0 };
+
+    //usar coordenadas absolutas de la ventana
     setContextMenu({
       visible: true,
-      x: event.clientX - bounds.left,
-      y: event.clientY - bounds.top,
+      x: event.clientX ,
+      y: event.clientY,
       node,
+      edge: null,
     });
   };
 
-  // close context menu on outside/Escape
+  const handleEdgeContextMenu = (event, edge) => {
+    event.preventDefault();
+    event.stopPropagation(); 
+    console.log('DEBUG: handleEdgeContextMenu disparado para relación:', edge);
+    const bounds = reactFlowWrapper.current ? reactFlowWrapper.current.getBoundingClientRect() : { left: 0, top: 0 };
+    
+    //usar coordenadas absolutas de la ventana
+    setContextMenu({
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      node: null,
+      edge,
+    });
+  };
+
+  // Close context menu on outside/Escape
   useEffect(() => {
     const onDocClick = (e) => {
       if (!reactFlowWrapper.current) {
-        setContextMenu({ visible: false, x: 0, y: 0, node: null });
+        setContextMenu({ visible: false, x: 0, y: 0, node: null, edge: null });
         return;
       }
       const menuEl = reactFlowWrapper.current.querySelector('.rf-context-menu');
       if (menuEl && menuEl.contains(e.target)) return;
-      setContextMenu({ visible: false, x: 0, y: 0, node: null });
+      setContextMenu({ visible: false, x: 0, y: 0, node: null, edge: null });
     };
-    const onKey = (e) => { if (e.key === 'Escape') { setContextMenu({ visible: false, x: 0, y: 0, node: null }); setToast(null); } };
+
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        setContextMenu({ visible: false, x: 0, y: 0, node: null, edge: null });
+        setToast(null);
+      }
+    };
+
     document.addEventListener('click', onDocClick);
     document.addEventListener('keydown', onKey);
     return () => {
@@ -207,11 +270,10 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     };
   }, []);
 
-  // context menu actions (record history before mutating)
-  const copiarNodo = () => {
-    const node = contextMenu.node;
-    if (!node) return;
-    recordHistoryBeforeChange();
+  // Context menu actions
+  const copiarNodo = (node) => {
+    saveState(nodes, edges);
+
     const newId = `n_${Date.now()}`;
     const offset = 24;
     const cloned = {
@@ -220,31 +282,49 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
       position: { x: node.position.x + offset, y: node.position.y + offset },
       data: JSON.parse(JSON.stringify(node.data)),
     };
+
     setNodes((nds) => nds.concat(cloned));
-    setContextMenu({ visible: false, x: 0, y: 0, node: null });
+    setContextMenu({ visible: false, x: 0, y: 0, node: null, edge: null });
   };
 
-  const eliminarNodoMenu = () => {
-    const node = contextMenu.node;
-    if (!node) return;
-    recordHistoryBeforeChange();
+  const eliminarNodoMenu = (node) => {
+    saveState(nodes, edges);
+
     setNodes((nds) => nds.filter((n) => n.id !== node.id));
     setEdges((eds) => eds.filter((e) => e.source !== node.id && e.target !== node.id));
+
     if (claseEditando && claseEditando.id === node.id) {
       setModalAbierto(false);
       setClaseEditando(null);
     }
-    setContextMenu({ visible: false, x: 0, y: 0, node: null });
+    setContextMenu({ visible: false, x: 0, y: 0, node: null, edge: null });
   };
 
-  // Serializa estado actual del editor a la "estructura" que se enviará al backend
-  // Acepta snapshots opcionales para evitar condiciones de carrera (usar cuando se acaba de setNodes)
+  const eliminarRelacion = (relacionId) => {
+    console.log('DEBUG: eliminarRelacion llamada para relación ID:', relacionId);
+    console.log('DEBUG: Edges antes de eliminar:', edges);
+
+    saveState(nodes, edges);
+
+    const nuevasEdges = edges.filter((e) => e.id !== relacionId);
+    console.log('DEBUG: Edges después de eliminar:', nuevasEdges);
+
+    setEdges(nuevasEdges);
+    setContextMenu({ visible: false, x: 0, y: 0, node: null, edge: null });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu({ visible: false, x: 0, y: 0, node: null, edge: null });
+  };
+
+  // Serializa estado actual del editor
   const serializarEstructura = (nodesSnapshot = null, edgesSnapshot = null) => {
     const ns = nodesSnapshot || nodes;
     const es = edgesSnapshot || edges;
+
     const clases = ns.map((n) => ({
       id: n.id,
-      nombre: n.data?.nombre,
+      nombre: n.data?.nombre || n.data?.label,
       estereotipo: n.data?.estereotipo,
       atributos: n.data?.atributos || [],
       metodos: n.data?.metodos || [],
@@ -255,15 +335,16 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
       id: e.id || `${e.source}_${e.target}`,
       source: e.source,
       target: e.target,
-      tipo: e.data?.tipo || null,
+      tipo: e.data?.tipo || 'asociacion',
+      multiplicidadSource: e.data?.multiplicidadSource || '1',
+      multiplicidadTarget: e.data?.multiplicidadTarget || 'N',
       label: e.data?.label || null,
     }));
 
     return { clases, relaciones };
   };
 
-  // Persistencia via diagramService: crea o actualiza según exista id
-  // acepta estructuraSnapshot opcional (resultado de serializarEstructura) para evitar usar estado desincronizado
+  // Persistencia via diagramService
   const persistDiagrama = async (estructuraSnapshot = null) => {
     const payload = {
       nombre: estructuraInicial?.nombre || 'Diagrama',
@@ -298,42 +379,18 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     }
   };
 
-  const validarRelacion = (nuevaRelacion) => {
-    // Verificar si los nodos conectados existen
-    const origenExiste = nodes.some((nodo) => nodo.id === nuevaRelacion.source);
-    const destinoExiste = nodes.some((nodo) => nodo.id === nuevaRelacion.target);
-
-    if (!origenExiste || !destinoExiste) {
-      setToast({ type: 'error', message: 'Uno o ambos nodos de la relación no existen.' });
-      return false;
-    }
-
-    // Verificar si ya existe una relación entre los mismos nodos
-    const relacionDuplicada = edges.some(
-      (relacion) =>
-        relacion.source === nuevaRelacion.source && relacion.target === nuevaRelacion.target
-    );
-
-    if (relacionDuplicada) {
-      setToast({ type: 'error', message: 'Ya existe una relación entre estos nodos.' });
-      return false;
-    }
-
+  const validarDiagramaAntesDeGuardar = () => {
+    console.log('DEBUG: Validación de relaciones eliminada. Procediendo sin validaciones.');
     return true;
   };
 
-  const validarDiagramaAntesDeGuardar = () => {
-    console.log('DEBUG: Validación de relaciones eliminada. Procediendo sin validaciones.');
-    return true; // Permitir siempre guardar el diagrama
-  };
-
-  // handler público para botón Guardar
+  // Handler público para botón Guardar
   const handleGuardarDiagrama = async () => {
     console.log('DEBUG: Método handleGuardarDiagrama ejecutado.');
 
     if (!validarDiagramaAntesDeGuardar()) {
       console.warn('DEBUG: Validación fallida. No se puede guardar el diagrama.');
-      return; // Detener el guardado si hay errores
+      return;
     }
 
     console.log('DEBUG: Validación exitosa. Procediendo a guardar el diagrama.');
@@ -347,42 +404,78 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     }
   };
 
-  // llamado cuando se guarda la clase desde el modal
+  // Llamado cuando se guarda la clase desde el modal
   const handleGuardarClase = (claseActualizada) => {
-    recordHistoryBeforeChange();
+    saveState(nodes, edges);
 
-    // crear snapshot de nodos con el cambio aplicado (no depender de setState inmediato)
-    const updatedNodes = (nodesRef.current || nodes).map((n) =>
-      n.id === claseEditando.id ? { ...n, data: claseActualizada } : n
+    const updatedNodes = nodes.map((n) =>
+      n.id === claseEditando.id ? { ...n, data: { ...n.data, ...claseActualizada } } : n
     );
 
-    setNodes(updatedNodes); // actualiza UI
+    setNodes(updatedNodes);
     setModalAbierto(false);
     setClaseEditando(null);
 
-    // serializar con snapshot explícito y pasarla a persistDiagrama
-    const estructuraSnapshot = serializarEstructura(updatedNodes, edgesRef.current);
+    const estructuraSnapshot = serializarEstructura(updatedNodes, edges);
     persistDiagrama(estructuraSnapshot);
   };
 
-  // onCancelar del modal: cierra modal y también persiste estado actual
   const handleCancelarModal = () => {
     setModalAbierto(false);
     setClaseEditando(null);
     persistDiagrama();
   };
 
+  // Undo/Redo functions corregidas
+  const handleUndo = () => {
+    if (!canUndo) return;
+
+    const previousState = historyUndo(nodes, edges);
+    if (previousState) {
+      setNodes(previousState.nodes);
+      setEdges(previousState.edges);
+    }
+  };
+
+  const handleRedo = () => {
+    if (!canRedo) return;
+
+    const nextState = historyRedo();
+    if (nextState) {
+      setNodes(nextState.nodes);
+      setEdges(nextState.edges);
+    }
+  };
+
+  // NodeTypes y EdgeTypes memoizados para mejor rendimiento
+  const nodeTypes = useMemo(() => ({
+    claseNode: ClaseNodeRF
+  }), []);
+
+  const edgeTypes = useMemo(() => ({
+    relacionNode: (props) => <RelacionNode {...props} onContextMenu={handleEdgeContextMenu} />
+  }), [handleEdgeContextMenu]);
+
+
+  // Handlers de cambio que registran en el historial
+  const handleNodesChange = useCallback((changes) => {
+    onNodesChange(changes);
+  }, [onNodesChange]);
+
+  const handleEdgesChange = useCallback((changes) => {
+    onEdgesChange(changes);
+  }, [onEdgesChange]);
+
   return (
-    // Usar wrapper que respeta el sidebar fijo (index.css define .editor-canvas-wrapper)
     <div className="editor-canvas-wrapper" style={{ height: '100%' }}>
       <div
         ref={reactFlowWrapper}
         className="editor-fullscreen reactflow-wrapper"
         style={{ flex: 1, minHeight: 420 }}
-        onDrop={handleDrop} // Evento registrado aquí
+        onDrop={handleDrop}
         onDragOver={handleDragOver}
       >
-        {/* Controles: Guardar + Undo/Redo + toast (fijos en la ventana) */}
+        {/* Controles: Guardar + Undo/Redo + toast */}
         <div style={{
           position: 'fixed',
           right: 20,
@@ -393,10 +486,10 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
           alignItems: 'center',
         }}>
           <button
-            onClick={handleGuardarDiagrama} // Llama al método handleGuardarDiagrama
+            onClick={handleGuardarDiagrama}
             className="bg-green-600 hover:bg-green-700 text-white text-lg px-5 py-2 rounded-md shadow-md fixed-control-btn"
             title="Guardar diagrama"
-            disabled={isSaving} // Deshabilitar mientras se guarda
+            disabled={isSaving}
             style={{ minWidth: 120, height: 44 }}
           >
             {isSaving ? 'Guardando...' : 'Guardar'}
@@ -404,18 +497,18 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
 
           <button
             onClick={handleUndo}
-            className="bg-white border px-3 py-2 rounded"
+            className={`bg-white border px-3 py-2 rounded ${canUndo ? 'hover:bg-gray-100 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
             title="Deshacer"
-            disabled={historyPast.length === 0}
+            disabled={!canUndo}
             style={{ height: 44 }}
           >
             ↶
           </button>
           <button
             onClick={handleRedo}
-            className="bg-white border px-3 py-2 rounded"
+            className={`bg-white border px-3 py-2 rounded ${canRedo ? 'hover:bg-gray-100 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
             title="Rehacer"
-            disabled={historyFuture.length === 0}
+            disabled={!canRedo}
             style={{ height: 44 }}
           >
             ↷
@@ -423,62 +516,56 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
         </div>
 
         {isLoading ? (
-          <div>Cargando editor...</div>
+          <div className="flex items-center justify-center h-full">
+            <div className="text-green-600 text-lg">Cargando editor...</div>
+          </div>
         ) : (
           <ReactFlow
             nodes={nodes}
             edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
+            onNodesChange={handleNodesChange}
+            onEdgesChange={handleEdgesChange}
             onConnect={onConnect}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             onNodeClick={handleNodeClick}
             onNodeDoubleClick={handleNodeDoubleClick}
             onNodeContextMenu={handleNodeContextMenu}
-            nodeTypes={nodeTypes}
+            onEdgeContextMenu={handleEdgeContextMenu}
             fitView
-            onInit={(instance) => setReactFlowInstance(instance)} // Inicializa reactFlowInstance
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
+            onInit={(instance) => setReactFlowInstance(instance)}
+            connectionLineType="smoothstep"
+            connectionRadius={20}
           >
             <Controls />
             <Background gap={16} />
           </ReactFlow>
         )}
 
-        {/* Context menu */}
-        {contextMenu.visible && (
-          <div
-            className="rf-context-menu bg-white border rounded shadow-md text-sm"
-            style={{
-              position: 'absolute',
-              left: contextMenu.x,
-              top: contextMenu.y,
-              zIndex: 9999,
-              minWidth: 140,
-            }}
-          >
-            <button
-              className="w-full text-left px-3 py-2 hover:bg-gray-100"
-              onClick={() => {
-                setClaseEditando(contextMenu.node);
-                setModalAbierto(true);
-                setContextMenu({ visible: false, x: 0, y: 0, node: null });
-              }}
-            >
-              Editar
-            </button>
-            <button className="w-full text-left px-3 py-2 hover:bg-gray-100" onClick={copiarNodo}>
-              Copiar
-            </button>
-            <button className="w-full text-left px-3 py-2 text-red-600 hover:bg-gray-100" onClick={eliminarNodoMenu}>
-              Eliminar
-            </button>
-          </div>
-        )}
+        {/* Renderizar el menú contextual */}
+        <ContextMenu
+          visible={contextMenu.visible}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          node={contextMenu.node}
+          edge={contextMenu.edge}
+          onEditarNodo={(node) => {
+            setClaseEditando(node);
+            setModalAbierto(true);
+          }}
+          onCopiarNodo={copiarNodo}
+          onEliminarNodo={eliminarNodoMenu}
+          onEliminarRelacion={eliminarRelacion}
+          onClose={closeContextMenu}
+        />
 
-        {/* Toast / errores de validación */}
+        {/* Toast notifications */}
         {toast && (
-          <div className={`toast toast-${toast.type}`}>
+          <div
+            className={`fixed top-20 right-4 px-4 py-2 rounded-md shadow-lg z-50 ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+              }`}
+            style={{ animation: 'fadeIn 0.3s ease-in-out' }}
+          >
             {toast.message}
           </div>
         )}
@@ -496,4 +583,3 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
 };
 
 export default EditorDiagrama;
-

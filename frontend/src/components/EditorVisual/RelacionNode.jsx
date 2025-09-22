@@ -1,4 +1,5 @@
 import React from 'react';
+import { BaseEdge, EdgeLabelRenderer } from '@xyflow/react';
 
 /**
  * Edge custom para UML con marcadores:
@@ -7,6 +8,8 @@ import React from 'react';
  */
 const RelacionNode = ({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   targetX,
@@ -14,56 +17,85 @@ const RelacionNode = ({
   sourcePosition,
   targetPosition,
   style = {},
-  markerEnd,
   data = {},
+  // Eliminamos onContextMenu de aquí
 }) => {
-  // Curva bezier simple
-  const deltaX = targetX - sourceX;
-  const deltaY = targetY - sourceY;
-  const controlX = sourceX + deltaX / 2;
-  const controlY1 = sourceY;
-  const controlY2 = targetY;
-  const path = `M ${sourceX},${sourceY} C ${controlX},${controlY1} ${controlX},${controlY2} ${targetX},${targetY}`;
+  // Línea recta entre source y target
+  const path = `M ${sourceX},${sourceY} L ${targetX},${targetY}`;
 
-  const tipo = data?.tipo || 'asociacion';
-  const markerId = `marker-${tipo}-${id}`;
-
-  // Estilo de linea
-  const strokeDash = tipo === 'dependencia' ? '6,3' : '0';
+  const centerX = (sourceX + targetX) / 2;
+  const centerY = (sourceY + targetY) / 2;
 
   return (
     <>
-      <svg className="react-flow__edge" style={{ overflow: 'visible' }}>
-        <defs>
-          {/* Flecha simple para asociación (cerrada) */}
-          <marker id={markerId} markerUnits="strokeWidth" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto">
-            {tipo === 'herencia' ? (
-              // triángulo hueco (generalización)
-              <path d="M0,0 L10,5 L0,10 Z" fill="white" stroke="black" />
-            ) : tipo === 'agregacion' ? (
-              // rombo hueco (agregación)
-              <path d="M0,5 L5,0 L10,5 L5,10 Z" fill="white" stroke="black" />
-            ) : tipo === 'composicion' ? (
-              // rombo sólido (composición)
-              <path d="M0,5 L5,0 L10,5 L5,10 Z" fill="black" stroke="black" />
-            ) : tipo === 'dependencia' ? (
-              // flecha de dependencia (línea punteada con flecha vacía)
-              <path d="M0,0 L10,5 L0,10" fill="none" stroke="black" />
-            ) : (
-              // asociación por defecto: flecha llena
-              <path d="M0,0 L10,5 L0,10 Z" fill="black" stroke="black" />
-            )}
-          </marker>
-        </defs>
-
-        <path d={path} fill="none" stroke="black" strokeWidth="1.3" strokeDasharray={strokeDash} markerEnd={`url(#${markerId})`} style={style} />
-        {/* Etiqueta cerca del target */}
-        {data?.label && (
-          <text x={(sourceX + targetX) / 2} y={(sourceY + targetY) / 2 - 6} fontSize="12" fill="#111" textAnchor="middle">
-            {data.label}
-          </text>
+      <BaseEdge
+        path={path}
+        style={{ 
+          stroke: '#000', 
+          strokeWidth: 2, 
+          ...style,
+          cursor: 'context-menu' // Solo para indicar que es clickeable
+        }}
+      />
+      
+      {/* Etiquetas de multiplicidad */}
+      <EdgeLabelRenderer>
+        {data?.multiplicidadSource && (
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${sourceX + (targetX - sourceX) * 0.25}px, ${sourceY + (targetY - sourceY) * 0.25}px)`,
+              background: 'white',
+              padding: '2px 6px',
+              borderRadius: '3px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              border: '1px solid #ccc',
+            }}
+            className="edge-label"
+          >
+            {data.multiplicidadSource}
+          </div>
         )}
-      </svg>
+
+        {data?.multiplicidadTarget && (
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${targetX - (targetX - sourceX) * 0.25}px, ${targetY - (targetY - sourceY) * 0.25}px)`,
+              background: 'white',
+              padding: '2px 6px',
+              borderRadius: '3px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              border: '1px solid #ccc',
+            }}
+            className="edge-label"
+          >
+            {data.multiplicidadTarget}
+          </div>
+        )}
+
+        {/* Etiqueta del tipo de relación en el centro */}
+        {data?.tipo && (
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${centerX}px, ${centerY}px)`,
+              background: 'white',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              border: '1px solid #999',
+              color: '#333',
+            }}
+            className="edge-type-label"
+          >
+            {data.tipo}
+          </div>
+        )}
+      </EdgeLabelRenderer>
     </>
   );
 };
