@@ -1,4 +1,4 @@
-import { API_ENDPOINTS, apiClient, setToken, removeToken } from './apiConfig';
+import { API_ENDPOINTS, apiClient, setToken, setRefreshToken, removeToken } from './apiConfig';
 
 /**
  * Iniciar sesión con JWT
@@ -9,16 +9,26 @@ import { API_ENDPOINTS, apiClient, setToken, removeToken } from './apiConfig';
 export const login = async (correo, password) => {
   try {
     const resp = await apiClient.post(API_ENDPOINTS.LOGIN, {
-      correo_electronico: correo, // <-- Este campo debe coincidir con el backend
+      correo_electronico: correo,
       password,
     });
-    if (resp.data?.access) {
-      setToken(resp.data.access);
+
+    if (resp?.data?.access) {
+      setToken(resp.data.access); // Guardar el access token
+      setRefreshToken(resp.data.refresh); // Guardar el refresh token
+      return resp.data;
+    } else {
+      throw new Error('No se recibió un token de acceso válido.');
     }
-    return resp.data;
   } catch (error) {
     console.error('authService.login error:', error);
-    throw error;
+
+    // Manejo de errores específicos
+    if (error.response?.status === 401) {
+      throw new Error('Credenciales inválidas. Por favor, verifica tu correo y contraseña.');
+    } else {
+      throw new Error('Error al conectar con el servidor. Inténtalo de nuevo más tarde.');
+    }
   }
 };
 

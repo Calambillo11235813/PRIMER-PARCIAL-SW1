@@ -19,7 +19,6 @@ const EditorDiagramaPage = () => {
         if (idDiagrama) {
           const resp = await obtenerDiagramaPorId(idDiagrama);
           console.log('Diagrama recibido:', resp.data);
-          // guardar estructura y projectId por separado
           if (resp.data && resp.data.estructura && Object.keys(resp.data.estructura).length > 0) {
             setEstructura(resp.data.estructura);
           } else {
@@ -32,22 +31,27 @@ const EditorDiagramaPage = () => {
         }
       } catch (err) {
         console.error('Error cargando diagrama:', err);
-        setError('No se pudo cargar el diagrama. Verifica el ID.');
-        setEstructura({ clases: [], relaciones: [] });
+        if (err.response?.status === 401) {
+          console.error('Usuario no autenticado. Redirigiendo al inicio de sesión.');
+          navigate('/login'); // Redirigir al inicio de sesión si el usuario no está autenticado
+        } else {
+          setError('No se pudo cargar el diagrama. Verifica el ID.');
+          setEstructura({ clases: [], relaciones: [] });
+        }
       } finally {
         setLoading(false);
       }
     };
     cargar();
-  }, [idDiagrama]);
+  }, [idDiagrama, navigate]);
 
   if (loading) return <div className="p-8">Cargando diagrama...</div>;
   if (error) return <div className="p-8 text-red-600">{error}</div>;
 
   return (
-    <div className="bg-green-50" style={{ minHeight: '100vh', position: 'relative', width: '100vw', padding: 0, margin: 0 }}>
+    <div className="bg-green-50" style={{ minHeight: '100vh', position: 'relative', width: '100%', padding: 0, margin: 0 }}>
       {/* Quitamos botón Volver aquí; Sidebar lo maneja */}
-      <div style={{ display: 'flex', width: '100%', height: '100%' }}>
+      <div style={{ display: 'flex', width: '100%', height: '100vh' }}>
         {/* Sidebar se renderiza normalmente; pasamos onBack apuntando a la lista de diagramas del proyecto */}
         <Sidebar onBack={() => {
           if (projectId) {
@@ -58,7 +62,7 @@ const EditorDiagramaPage = () => {
             navigate(-1);
           }
         }} />
-        <div style={{ flex: 1, minHeight: '100vh' }}>
+        <div style={{ flex: 1, height: '100vh' }}>
           <EditorDiagrama
             estructuraInicial={estructura}
             projectId={projectId}

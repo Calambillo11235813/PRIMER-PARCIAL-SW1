@@ -10,14 +10,9 @@ const Login = ({ onLogin, onMostrarRegistro }) => {
     e.preventDefault();
     setError('');
     try {
-      const respuesta = await login(correo_electronico, password);
-      if (respuesta && respuesta.access) {
-        onLogin(correo_electronico, password);
-      } else {
-        setError('Error al iniciar sesión');
-      }
+      await onLogin(correo_electronico, password);
     } catch (err) {
-      setError('Credenciales inválidas');
+      setError(err.message); // Mostrar el mensaje de error al usuario
     }
   };
 

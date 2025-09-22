@@ -107,8 +107,11 @@ html, body, #root {
 
 /* ancho fijo del sidebar - ajustar si tu sidebar tiene otro width */
 :root {
-  --editor-sidebar-width: 320px; /* sincroniza si cambias el ancho */
-  --header-height: 72px;
+  --editor-sidebar-width: 320px; /* Ajusta este valor si el sidebar tiene otro ancho */
+}
+.editor-full-canvas {
+  margin-left: var(--editor-sidebar-width); /* Mover canvas a la derecha del sidebar fijo */
+  width: calc(100% - var(--editor-sidebar-width));
 }
 
 /* Sidebar fijo al borde izquierdo, bajo el header */

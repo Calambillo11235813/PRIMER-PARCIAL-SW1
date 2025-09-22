@@ -24,67 +24,36 @@ export const apiClient = {
   // Firma original: request(method, url, data)
   async request(method, url, data = null) {
     const fullUrl = API_URL + url;
-    const token = getToken();
+
+    // Excluir la verificación del token para el endpoint de inicio de sesión
+    if (!url.includes(API_ENDPOINTS.LOGIN)) {
+      const token = getToken();
+      if (!token) {
+        console.error('DEBUG: No hay token disponible. Redirigiendo al inicio de sesión.');
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+        throw new Error('No hay token disponible. Redirigiendo al inicio de sesión.');
+      }
+    }
+
     const headers = { 'Accept': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (getToken()) headers['Authorization'] = `Bearer ${getToken()}`;
     if (method !== 'GET') headers['Content-Type'] = 'application/json';
     const options = { method, headers };
     if (data) options.body = JSON.stringify(data);
 
-    // Debug: mostrar token presence (no mostrar token completo en producción)
-    console.debug('apiClient.request', { method, fullUrl, hasToken: !!token });
-
-    // Helper para parsear body seguro
-    const parseResponse = async (resp) => {
-      const text = await resp.text();
-      const json = text ? JSON.parse(text) : null;
-      return { resp, json };
-    };
+    console.log('DEBUG: Enviando token en la solicitud:', headers['Authorization']);
 
     try {
       let resp = await fetch(fullUrl, options);
+      const parseResponse = async (resp) => {
+        const text = await resp.text();
+        const json = text ? JSON.parse(text) : null;
+        return { resp, json };
+      };
       let parsed = await parseResponse(resp);
 
-      // Si recibimos 401 intentamos refresh (una vez) si hay refresh token
-      if (!resp.ok && resp.status === 401) {
-        const refresh = getRefreshToken();
-        if (refresh) {
-          console.debug('apiClient: detected 401, attempting token refresh');
-          try {
-            const refreshResp = await fetch(API_URL + API_ENDPOINTS.REFRESH, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-              body: JSON.stringify({ refresh }),
-            });
-            const refreshBodyText = await refreshResp.text();
-            const refreshBody = refreshBodyText ? JSON.parse(refreshBodyText) : null;
-            if (refreshResp.ok && refreshBody?.access) {
-              // guardar nuevo access token
-              setAccessToken(refreshBody.access);
-              console.debug('apiClient: token refreshed, retrying original request');
-
-              // retry original request with new token
-              headers['Authorization'] = `Bearer ${refreshBody.access}`;
-              options.headers = headers;
-              resp = await fetch(fullUrl, options);
-              parsed = await parseResponse(resp);
-            } else {
-              // refresh failed -> limpiar tokens y lanzar
-              console.warn('apiClient: refresh failed', { refreshRespStatus: refreshResp.status, refreshBody });
-              removeToken();
-              removeRefreshToken();
-            }
-          } catch (refreshErr) {
-            console.error('apiClient: error during refresh', refreshErr);
-            removeToken();
-            removeRefreshToken();
-          }
-        } else {
-          console.debug('apiClient: no refresh token available');
-        }
-      }
-
-      // Ahora procesar respuesta final
       if (!parsed.resp.ok) {
         const error = new Error(`HTTP error! status: ${parsed.resp.status}`);
         error.status = parsed.resp.status;
@@ -95,7 +64,7 @@ export const apiClient = {
 
       return { status: parsed.resp.status, data: parsed.json };
     } catch (error) {
-      console.error(`apiClient: Error en ${method}:`, error);
+      console.error('DEBUG: Error en la solicitud:', error);
       throw error;
     }
   },
@@ -104,25 +73,4 @@ export const apiClient = {
   post(url, data) { return this.request('POST', url, data); },
   put(url, data) { return this.request('PUT', url, data); },
   delete(url) { return this.request('DELETE', url); },
-
-  // Nueva función genérica que acepta (path, options) y devuelve el body (útil para usos donde
-  // queremos parsear el JSON de error y lanzarlo)
-  async requestRaw(path, options = {}) {
-    const res = await fetch(API_URL + path, options);
-    const contentType = res.headers.get('content-type') || '';
-    let body = null;
-    if (contentType.includes('application/json')) {
-      body = await res.json();
-    } else {
-      body = await res.text();
-    }
-    if (!res.ok) {
-      const error = new Error(`HTTP error! status: ${res.status}`);
-      error.status = res.status;
-      error.data = body;
-      console.error('apiClient: Error en requestRaw:', { path, status: res.status, body });
-      throw error;
-    }
-    return body;
-  },
 };

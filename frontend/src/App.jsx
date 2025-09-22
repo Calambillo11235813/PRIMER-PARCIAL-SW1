@@ -45,10 +45,10 @@ function App() {
       if (respuesta && respuesta.access) {
         const usuarioActual = await getCurrentUser();
         setUser(usuarioActual);
-        setMostrarRegistro(false);
+        navigate('/'); // Redirigir al dashboard después de iniciar sesión
       }
     } catch (err) {
-      // Puedes mostrar un mensaje de error aquí si lo necesitas
+      console.error('Error al iniciar sesión:', err);
     }
   };
 
@@ -94,31 +94,13 @@ function App() {
       {user && <Navbar usuario={user} onLogout={handleLogout} onIrPerfil={handleIrPerfil} />}
       <main className="container mx-auto p-4">
         <Routes>
-          <Route
-            path="/"
-            element={
-              !user ? (
-                <Login onLogin={handleLogin} onMostrarRegistro={() => setMostrarRegistro(true)} />
-              ) : mostrarPerfil ? (
-                <div>
-                  <button
-                    onClick={handleVolver}
-                    className="mb-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
-                  >
-                    Volver
-                  </button>
-                  <PerfilUsuario usuario={user} />
-                </div>
-              ) : (
-                <Dashboard user={user} onIrPerfil={handleIrPerfil} />
-              )
-            }
-          />
+          <Route path="/" element={<Dashboard user={user} onIrPerfil={handleIrPerfil} />} />
+          <Route path="/login" element={<Login onLogin={handleLogin} onMostrarRegistro={() => setMostrarRegistro(true)} />} /> {/* Ruta explícita para /login */}
           <Route path="/registro" element={<Registro onVolver={handleVolverLogin} />} />
           <Route path="/proyectos" element={<ListaProyectos />} />
-          <Route path="/editor" element={<EditorDiagramaPage />} />  {/* Cambiado: usa page para manejo de carga */}
+          <Route path="/editor" element={<EditorDiagramaPage />} />
           <Route path="/diagramas" element={<ListaDiagramas />} />
-          <Route path="/editor/:idDiagrama" element={<EditorDiagramaPage />} />  {/* Cambiado: usa page */}
+          <Route path="/editor/:idDiagrama" element={<EditorDiagramaPage />} />
         </Routes>
       </main>
     </div>

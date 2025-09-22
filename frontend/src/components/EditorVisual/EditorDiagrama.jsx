@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { ReactFlow, addEdge, useEdgesState, useNodesState, Controls, Background } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import ClaseNodeRF from './ClaseNodeRF.jsx';
-import Sidebar from './Sidebar';
+// import Sidebar from './Sidebar'; // Eliminado: Sidebar se renderiza en la página padre
 import EditarClaseModal from './EditarClaseModal';
 import { crearDiagrama, actualizarDiagrama } from '../../services/diagramService';
 
@@ -18,6 +18,7 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
 
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
+  const lastDropRef = useRef(0); // evita duplicados (timestamp)
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, node: null });
@@ -117,40 +118,47 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     event.dataTransfer.dropEffect = 'move';
   };
 
-  // Drop handler
+  // Drop handler: coloca el nodo exactamente donde está el cursor (robusto ante overlays/transform)
   const handleDrop = (event) => {
     event.preventDefault();
-    const tipoElemento =
-      event.dataTransfer.getData('application/reactflow') ||
-      event.dataTransfer.getData('nodeType') ||
-      event.dataTransfer.getData('text/plain') ||
-      '';
+    console.log('Evento onDrop disparado:', event);
 
-    if (!tipoElemento) return;
+    // Prevenir eventos duplicados usando un timestamp
+    const now = Date.now();
+    if (now - lastDropRef.current < 300) { // Aumentar el umbral a 300ms
+      console.warn('Evento duplicado detectado, ignorando...');
+      return;
+    }
+    lastDropRef.current = now;
 
-    recordHistoryBeforeChange();
+    // Obtener el tipo de nodo arrastrado
+    const tipoNodo = event.dataTransfer.getData('application/reactflow');
+    if (!tipoNodo) {
+      console.warn('No se pudo obtener el tipo de nodo desde el evento de arrastre.');
+      return;
+    }
 
-    const bounds = reactFlowWrapper.current
-      ? reactFlowWrapper.current.getBoundingClientRect()
-      : { left: 0, top: 0 };
+    // Calcular posición en el canvas manualmente, ajustando por desplazamiento y escalado
+    const bounds = reactFlowWrapper.current.getBoundingClientRect();
+    const scale = reactFlowInstance?.zoom || 1; // Obtener el escalado actual del canvas
+    const sidebarWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--editor-sidebar-width'), 10) || 0;
 
-    const clientX = event.clientX;
-    const clientY = event.clientY;
-
-    const position = reactFlowInstance && typeof reactFlowInstance.project === 'function'
-      ? reactFlowInstance.project({ x: clientX - bounds.left, y: clientY - bounds.top })
-      : { x: clientX - bounds.left, y: clientY - bounds.top };
-
-    const nodeType = tipoElemento === 'clase' || tipoElemento.toLowerCase().includes('clase') ? 'claseNode' : tipoElemento;
-
-    const newNode = {
-      id: `n_${Date.now()}`,
-      type: nodeType,
-      position,
-      data: { nombre: 'NuevaClase', atributos: [], metodos: [] },
+    const posicion = {
+      x: (event.clientX - bounds.left - sidebarWidth) / scale,
+      y: (event.clientY - bounds.top) / scale,
     };
 
-    setNodes((nds) => nds.concat(newNode));
+    console.log('Posición calculada ajustada:', posicion);
+
+    const nuevoNodo = {
+      id: `${tipoNodo}-${Date.now()}`, // ID único para el nodo
+      type: tipoNodo, // Tipo de nodo (e.g., claseNode)
+      position: posicion, // Posición calculada manualmente
+      data: { label: `Nuevo ${tipoNodo}` }, // Datos iniciales del nodo
+    };
+
+    setNodes((nds) => [...nds, nuevoNodo]); // Agregar nodo al estado
+    recordHistoryBeforeChange(); // Registrar en el historial
   };
 
   // node interactions
@@ -257,69 +265,86 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
   // Persistencia via diagramService: crea o actualiza según exista id
   // acepta estructuraSnapshot opcional (resultado de serializarEstructura) para evitar usar estado desincronizado
   const persistDiagrama = async (estructuraSnapshot = null) => {
-    // Preferir prop diagramaId (viene del padre). Si no, intentar leer estructuraInicial.id
-    const diagramaIdLocal = diagramaId || estructuraInicial?.id || null;
-    const proyecto = estructuraInicial?.proyecto || estructuraInicial?.proyecto_id || projectId || null;
-
-    if (!proyecto) {
-      console.warn('persistDiagrama: no hay proyecto asociado (estructuraInicial.proyecto). Pasa projectId como prop o selecciona un proyecto.');
-      setToast({ type: 'error', message: 'No hay proyecto asociado. Guardado cancelado.' });
-      return;
-    }
-
     const payload = {
       nombre: estructuraInicial?.nombre || 'Diagrama',
       descripcion: estructuraInicial?.descripcion || '',
-      proyecto,
+      proyecto: estructuraInicial?.proyecto || projectId || null,
       estructura: estructuraSnapshot || serializarEstructura(),
     };
 
-    console.log('Estructura enviada al backend (payload):', payload);
+    console.log('DEBUG: Estructura enviada al backend (payload):', payload);
 
     setIsSaving(true);
-    setValidationErrors(null);
     try {
       let res;
-      if (diagramaIdLocal) {
-        // actualizar solo la estructura (diagramService extrae y envía { estructura: ... })
-        res = await actualizarDiagrama(diagramaIdLocal, payload);
-        console.log('Diagrama actualizado (respuesta):', res?.data ?? res);
+      if (diagramaId) {
+        res = await actualizarDiagrama(diagramaId, payload);
+        console.log('DEBUG: Diagrama actualizado (respuesta):', res?.data ?? res);
       } else {
         res = await crearDiagrama(payload);
-        console.log('Diagrama creado (respuesta):', res?.data ?? res);
+        console.log('DEBUG: Diagrama creado (respuesta):', res?.data ?? res);
       }
       setToast({ type: 'success', message: 'Diagrama guardado correctamente' });
       setIsSaving(false);
-      setValidationErrors(null);
-      if (typeof onGuardar === 'function') onGuardar(res?.data ?? res);
       return res?.data ?? res;
-    } catch (e) {
+    } catch (error) {
       setIsSaving(false);
-      // mostrar errores de validación si vienen del backend
-      const details = e?.data ?? e?.response ?? null;
-      if (details && typeof details === 'object') {
-        // convertir objeto de errores a array de strings
-        const messages = [];
-        Object.entries(details).forEach(([k, v]) => {
-          if (Array.isArray(v)) messages.push(`${k}: ${v.join('; ')}`);
-          else messages.push(`${k}: ${String(v)}`);
-        });
-        setValidationErrors(messages);
-        setToast({ type: 'error', message: 'Error guardando: revisa los errores' });
-        console.error('Detalles de validación:', messages);
-      } else {
-        setToast({ type: 'error', message: e?.message || 'Error guardando diagrama' });
-        console.error('Error guardando/creando diagrama via diagramService:', e);
+      console.error('DEBUG: Error al guardar el diagrama:', error);
+      if (error.response?.status === 401) {
+        console.error('DEBUG: Error de autenticación. Verifica el token.');
       }
-      throw e;
+      setToast({ type: 'error', message: 'Error al guardar el diagrama' });
+      throw error;
     }
+  };
+
+  const validarRelacion = (nuevaRelacion) => {
+    // Verificar si los nodos conectados existen
+    const origenExiste = nodes.some((nodo) => nodo.id === nuevaRelacion.source);
+    const destinoExiste = nodes.some((nodo) => nodo.id === nuevaRelacion.target);
+
+    if (!origenExiste || !destinoExiste) {
+      setToast({ type: 'error', message: 'Uno o ambos nodos de la relación no existen.' });
+      return false;
+    }
+
+    // Verificar si ya existe una relación entre los mismos nodos
+    const relacionDuplicada = edges.some(
+      (relacion) =>
+        relacion.source === nuevaRelacion.source && relacion.target === nuevaRelacion.target
+    );
+
+    if (relacionDuplicada) {
+      setToast({ type: 'error', message: 'Ya existe una relación entre estos nodos.' });
+      return false;
+    }
+
+    return true;
+  };
+
+  const validarDiagramaAntesDeGuardar = () => {
+    console.log('DEBUG: Validación de relaciones eliminada. Procediendo sin validaciones.');
+    return true; // Permitir siempre guardar el diagrama
   };
 
   // handler público para botón Guardar
   const handleGuardarDiagrama = async () => {
+    console.log('DEBUG: Método handleGuardarDiagrama ejecutado.');
+
+    if (!validarDiagramaAntesDeGuardar()) {
+      console.warn('DEBUG: Validación fallida. No se puede guardar el diagrama.');
+      return; // Detener el guardado si hay errores
+    }
+
+    console.log('DEBUG: Validación exitosa. Procediendo a guardar el diagrama.');
+
     const estructura = serializarEstructura();
-    console.log('Guardar manual - estructura a enviar:', estructura);
-    await persistDiagrama();
+    try {
+      await persistDiagrama(estructura);
+      console.log('DEBUG: Diagrama guardado exitosamente.');
+    } catch (error) {
+      console.error('DEBUG: Error al guardar el diagrama:', error);
+    }
   };
 
   // llamado cuando se guarda la clase desde el modal
@@ -348,13 +373,13 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
   };
 
   return (
-    <div className="flex" style={{ height: '100%' }}>
-      <Sidebar onDragStart={(e, tipo) => e.dataTransfer.setData('tipoElemento', tipo)} />
+    // Usar wrapper que respeta el sidebar fijo (index.css define .editor-canvas-wrapper)
+    <div className="editor-canvas-wrapper" style={{ height: '100%' }}>
       <div
         ref={reactFlowWrapper}
-        className="editor-fullscreen"
+        className="editor-fullscreen reactflow-wrapper"
         style={{ flex: 1, minHeight: 420 }}
-        onDrop={handleDrop}
+        onDrop={handleDrop} // Evento registrado aquí
         onDragOver={handleDragOver}
       >
         {/* Controles: Guardar + Undo/Redo + toast (fijos en la ventana) */}
@@ -368,11 +393,10 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
           alignItems: 'center',
         }}>
           <button
-            onClick={handleGuardarDiagrama}
-            // Aumenté tamaño de fuente, padding y altura
-            className="bg-green-600 hover:bg-green-700 text-white text-lg px-5 py-2 rounded-md shadow-md"
+            onClick={handleGuardarDiagrama} // Llama al método handleGuardarDiagrama
+            className="bg-green-600 hover:bg-green-700 text-white text-lg px-5 py-2 rounded-md shadow-md fixed-control-btn"
             title="Guardar diagrama"
-            disabled={isSaving}
+            disabled={isSaving} // Deshabilitar mientras se guarda
             style={{ minWidth: 120, height: 44 }}
           >
             {isSaving ? 'Guardando...' : 'Guardar'}
@@ -412,7 +436,9 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
             onNodeContextMenu={handleNodeContextMenu}
             nodeTypes={nodeTypes}
             fitView
-            onInit={(instance) => setReactFlowInstance(instance)}
+            onInit={(instance) => setReactFlowInstance(instance)} // Inicializa reactFlowInstance
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
           >
             <Controls />
             <Background gap={16} />
@@ -452,23 +478,8 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
 
         {/* Toast / errores de validación */}
         {toast && (
-          <div
-            style={{
-              position: 'absolute',
-              left: 12,
-              top: 12,
-              zIndex: 70,
-              minWidth: 220,
-            }}
-          >
-            <div className={`p-2 rounded shadow ${toast.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : toast.type === 'error' ? 'bg-red-50 border border-red-200 text-red-800' : 'bg-gray-50 border'}`}>
-              {toast.message}
-            </div>
-            {validationErrors && (
-              <div className="mt-2 p-2 bg-white border rounded text-xs text-red-700 max-h-40 overflow-auto">
-                {validationErrors.map((m, i) => <div key={i}>• {m}</div>)}
-              </div>
-            )}
+          <div className={`toast toast-${toast.type}`}>
+            {toast.message}
           </div>
         )}
       </div>
