@@ -1,79 +1,86 @@
 import React, { useEffect, useRef } from 'react';
 
-const ContextMenu = ({ visible, x, y, node, edge, onEditarNodo, onCopiarNodo, onEliminarNodo, onEliminarRelacion, onClose }) => {
+const ContextMenu = ({ visible, x, y, node, edge, onEditarNodo, onCopiarNodo, onEliminarNodo, onEditarRelacion, onEliminarRelacion, onClose }) => {
   const menuRef = useRef(null);
 
-  // Cerrar menú al hacer clic fuera
+  // Solo un efecto para manejar el cierre
+
+  console.log('🔵 ContextMenu renderizado:', {
+    visible,
+    x, y,
+    hasNode: !!node,
+    hasEdge: !!edge,
+    nodeId: node?.id,
+    edgeId: edge?.id
+  });
+
+
   useEffect(() => {
+    if (!visible) return;
+
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         onClose();
       }
     };
 
-    if (visible) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }
-  }, [visible, onClose]);
-
-  // Cerrar menú con Escape
-  useEffect(() => {
     const handleEscape = (event) => {
       if (event.key === 'Escape') {
         onClose();
       }
     };
 
-    if (visible) {
-      document.addEventListener('keydown', handleEscape);
-      return () => {
-        document.removeEventListener('keydown', handleEscape);
-      };
-    }
+    // Agregar event listeners
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, [visible, onClose]);
 
   if (!visible) return null;
 
-  // Ajustar posición si el menú se sale de la pantalla
-  const menuWidth = 160;
-  const menuHeight = node ? 120 : 40; // Altura según si es nodo o relación
+  // Calcular posición ajustada - VERSIÓN SIMPLIFICADA Y FUNCIONAL
+  const menuWidth = 180;
+  const menuHeight = node ? 120 : 80;
   const windowWidth = window.innerWidth;
   const windowHeight = window.innerHeight;
 
+  // Ajustar para que no se salga de la pantalla
   let adjustedX = x;
   let adjustedY = y;
 
-  // Ajustar horizontalmente
   if (x + menuWidth > windowWidth) {
-    adjustedX = x - menuWidth;
-  } else {
-    adjustedX = x + 5; // Pequeño margen a la derecha
+    adjustedX = windowWidth - menuWidth - 10;
   }
 
-  // Ajustar verticalmente
   if (y + menuHeight > windowHeight) {
-    adjustedY = windowHeight - menuHeight - 5;
+    adjustedY = windowHeight - menuHeight - 10;
   }
+
+  // Asegurar que no sea negativo
+  adjustedX = Math.max(10, adjustedX);
+  adjustedY = Math.max(10, adjustedY);
 
   return (
     <div
       ref={menuRef}
-      className="context-menu bg-white border border-gray-200 rounded-md shadow-lg z-50 text-sm"
+      className="context-menu bg-white border border-gray-300 rounded-lg shadow-xl z-[9999] text-sm"
       style={{
         position: 'fixed',
         left: adjustedX,
         top: adjustedY,
-        minWidth: '160px',
+        minWidth: `${menuWidth}px`,
       }}
     >
       {/* Opciones para nodos */}
       {node && (
         <div className="py-1">
           <button
-            className="w-full text-left px-3 py-2 hover:bg-gray-100 text-gray-700"
+            className="w-full text-left px-4 py-2.5 hover:bg-green-50 border-b border-gray-100 transition-colors"
             onClick={() => {
               onEditarNodo(node);
               onClose();
@@ -82,7 +89,7 @@ const ContextMenu = ({ visible, x, y, node, edge, onEditarNodo, onCopiarNodo, on
             ✏️ Editar
           </button>
           <button
-            className="w-full text-left px-3 py-2 hover:bg-gray-100 text-gray-700"
+            className="w-full text-left px-4 py-2.5 hover:bg-green-50 border-b border-gray-100 transition-colors"
             onClick={() => {
               onCopiarNodo(node);
               onClose();
@@ -91,7 +98,7 @@ const ContextMenu = ({ visible, x, y, node, edge, onEditarNodo, onCopiarNodo, on
             📋 Copiar
           </button>
           <button
-            className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600"
+            className="w-full text-left px-4 py-2.5 hover:bg-red-50 text-red-600 transition-colors"
             onClick={() => {
               onEliminarNodo(node);
               onClose();
@@ -106,7 +113,16 @@ const ContextMenu = ({ visible, x, y, node, edge, onEditarNodo, onCopiarNodo, on
       {edge && (
         <div className="py-1">
           <button
-            className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600"
+            className="w-full text-left px-4 py-2.5 hover:bg-green-50 border-b border-gray-100 transition-colors"
+            onClick={() => {
+              onEditarRelacion(edge);
+              onClose();
+            }}
+          >
+            ✏️ Editar relación
+          </button>
+          <button
+            className="w-full text-left px-4 py-2.5 hover:bg-red-50 text-red-600 transition-colors"
             onClick={() => {
               console.log('DEBUG: Eliminando relación:', edge);
               onEliminarRelacion(edge.id);

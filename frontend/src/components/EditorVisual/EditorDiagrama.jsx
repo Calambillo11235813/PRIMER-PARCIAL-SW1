@@ -6,6 +6,9 @@ import RelacionNode from './RelacionNode.jsx';
 import EditarClaseModal from './EditarClaseModal';
 import { crearDiagrama, actualizarDiagrama } from '../../services/diagramService';
 import ContextMenu from './ContextMenu';
+import EditarRelacionModal from './EditarRelacionModal';
+
+
 
 // Hook personalizado para manejar el historial
 const useDiagramHistory = () => {
@@ -60,6 +63,42 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
   const reactFlowWrapper = useRef(null);
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const lastDropRef = useRef(0);
+
+  //Estados para edicion de relaciones
+  const [relacionEditando, setRelacionEditando] = useState(null);
+  const [modalRelacionAbierto, setModalRelacionAbierto] = useState(false);
+
+  // Función para editar relación (AGREGA ESTA FUNCIÓN)
+  const handleEditarRelacion = (relacion) => {
+    console.log('DEBUG: Editando relación:', relacion);
+    setRelacionEditando(relacion);
+    setModalRelacionAbierto(true);
+  };
+
+  // Funcion para guardar relacion editada 
+
+  const handleGuardarRelacion = (relacionActualizada) => {
+    saveState(nodes, edges);
+
+    setEdges((eds) =>
+      eds.map((e) =>
+        e.id === relacionActualizada.id
+          ? { ...e, data: { ...e.data, ...relacionActualizada.data } }
+          : e
+      )
+    );
+
+    setModalRelacionAbierto(false);
+    setRelacionEditando(null);
+
+    // Persistir cambios
+    const estructuraSnapshot = serializarEstructura();
+    persistDiagrama(estructuraSnapshot);
+  };
+
+
+
+
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, node: null, edge: null });
@@ -133,15 +172,15 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
       id: `edge-${params.source}-${params.target}-${Date.now()}`,
       type: 'relacionNode',
       data: {
-        tipo: 'asociacion',
+        tipo: 'asociacion', //tipo por defecto 
         multiplicidadSource: '1',
         multiplicidadTarget: 'N',
-        label: 'asociación',
+
       },
     };
     console.log('DEBUG: Creando nueva relación:', nuevaRelacion);
     setEdges((eds) => addEdge(nuevaRelacion, eds));
-  }, [nodes, edges]);
+  }, [nodes, edges, saveState]);
 
   // Drag handlers para canvas
   const handleDragOver = (event) => {
@@ -217,10 +256,16 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     event.stopPropagation();
     const bounds = reactFlowWrapper.current ? reactFlowWrapper.current.getBoundingClientRect() : { left: 0, top: 0 };
 
+    console.log('🟢 NODO - Context menu click:', {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      nodeId: node.id
+    });
+
     //usar coordenadas absolutas de la ventana
     setContextMenu({
       visible: true,
-      x: event.clientX ,
+      x: event.clientX,
       y: event.clientY,
       node,
       edge: null,
@@ -229,10 +274,14 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
 
   const handleEdgeContextMenu = (event, edge) => {
     event.preventDefault();
-    event.stopPropagation(); 
+    event.stopPropagation();
     console.log('DEBUG: handleEdgeContextMenu disparado para relación:', edge);
     const bounds = reactFlowWrapper.current ? reactFlowWrapper.current.getBoundingClientRect() : { left: 0, top: 0 };
-    
+    console.log('🟢 RELACIÓN - Context menu click:', {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      edgeId: edge.id
+    });
     //usar coordenadas absolutas de la ventana
     setContextMenu({
       visible: true,
@@ -243,32 +292,8 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     });
   };
 
-  // Close context menu on outside/Escape
-  useEffect(() => {
-    const onDocClick = (e) => {
-      if (!reactFlowWrapper.current) {
-        setContextMenu({ visible: false, x: 0, y: 0, node: null, edge: null });
-        return;
-      }
-      const menuEl = reactFlowWrapper.current.querySelector('.rf-context-menu');
-      if (menuEl && menuEl.contains(e.target)) return;
-      setContextMenu({ visible: false, x: 0, y: 0, node: null, edge: null });
-    };
 
-    const onKey = (e) => {
-      if (e.key === 'Escape') {
-        setContextMenu({ visible: false, x: 0, y: 0, node: null, edge: null });
-        setToast(null);
-      }
-    };
 
-    document.addEventListener('click', onDocClick);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('click', onDocClick);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, []);
 
   // Context menu actions
   const copiarNodo = (node) => {
@@ -453,8 +478,8 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
   }), []);
 
   const edgeTypes = useMemo(() => ({
-    relacionNode: (props) => <RelacionNode {...props} onContextMenu={handleEdgeContextMenu} />
-  }), [handleEdgeContextMenu]);
+    relacionNode: RelacionNode
+  }), []);
 
 
   // Handlers de cambio que registran en el historial
@@ -465,6 +490,21 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
   const handleEdgesChange = useCallback((changes) => {
     onEdgesChange(changes);
   }, [onEdgesChange]);
+
+  console.log('🔴 Estado actual del contexto:', {
+    contextMenuVisible: contextMenu.visible,
+    contextMenuX: contextMenu.x,
+    contextMenuY: contextMenu.y,
+    hasNode: !!contextMenu.node,
+    hasEdge: !!contextMenu.edge,
+    nodeId: contextMenu.node?.id,
+    edgeId: contextMenu.edge?.id
+  });
+
+  console.log('🔴 EdgeTypes configurado:', edgeTypes);
+  console.log('🔴 Número de edges:', edges.length);
+  console.log('🔴 Edges disponibles:', edges.map(e => ({ id: e.id, type: e.type })));
+
 
   return (
     <div className="editor-canvas-wrapper" style={{ height: '100%' }}>
@@ -526,12 +566,24 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
             onNodesChange={handleNodesChange}
             onEdgesChange={handleEdgesChange}
             onConnect={onConnect}
+
+
+
+
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             onNodeClick={handleNodeClick}
             onNodeDoubleClick={handleNodeDoubleClick}
-            onNodeContextMenu={handleNodeContextMenu}
-            onEdgeContextMenu={handleEdgeContextMenu}
+
+            // 👇 Aquí capturas el clic derecho en un nodo
+
+            onNodeContextMenu={(event, node) => {
+              handleNodeContextMenu(event, node);
+             }}
+             // 👇 Aquí capturas el clic derecho en una relación (edge)
+            onEdgeContextMenu={(event, edge) => {
+              handleEdgeContextMenu(event, edge);
+            }}
             fitView
             onInit={(instance) => setReactFlowInstance(instance)}
             connectionLineType="smoothstep"
@@ -553,6 +605,7 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
             setClaseEditando(node);
             setModalAbierto(true);
           }}
+          onEditarRelacion={handleEditarRelacion}
           onCopiarNodo={copiarNodo}
           onEliminarNodo={eliminarNodoMenu}
           onEliminarRelacion={eliminarRelacion}
@@ -578,6 +631,15 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
           onCancelar={handleCancelarModal}
         />
       )}
+
+      {modalRelacionAbierto && (
+        <EditarRelacionModal
+          relacion={relacionEditando}
+          onGuardar={handleGuardarRelacion}
+          onCancelar={() => setModalRelacionAbierto(false)}
+        />
+      )}
+
     </div>
   );
 };
