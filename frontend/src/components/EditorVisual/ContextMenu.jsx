@@ -5,16 +5,6 @@ const ContextMenu = ({ visible, x, y, node, edge, onEditarNodo, onCopiarNodo, on
 
   // Solo un efecto para manejar el cierre
 
-  console.log('🔵 ContextMenu renderizado:', {
-    visible,
-    x, y,
-    hasNode: !!node,
-    hasEdge: !!edge,
-    nodeId: node?.id,
-    edgeId: edge?.id
-  });
-
-
   useEffect(() => {
     if (!visible) return;
 
@@ -124,7 +114,6 @@ const ContextMenu = ({ visible, x, y, node, edge, onEditarNodo, onCopiarNodo, on
           <button
             className="w-full text-left px-4 py-2.5 hover:bg-red-50 text-red-600 transition-colors"
             onClick={() => {
-              console.log('DEBUG: Eliminando relación:', edge);
               onEliminarRelacion(edge.id);
               onClose();
             }}

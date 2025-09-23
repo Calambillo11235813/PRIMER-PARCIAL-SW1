@@ -256,11 +256,7 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     event.stopPropagation();
     const bounds = reactFlowWrapper.current ? reactFlowWrapper.current.getBoundingClientRect() : { left: 0, top: 0 };
 
-    console.log('🟢 NODO - Context menu click:', {
-      clientX: event.clientX,
-      clientY: event.clientY,
-      nodeId: node.id
-    });
+    
 
     //usar coordenadas absolutas de la ventana
     setContextMenu({
@@ -491,20 +487,9 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     onEdgesChange(changes);
   }, [onEdgesChange]);
 
-  console.log('🔴 Estado actual del contexto:', {
-    contextMenuVisible: contextMenu.visible,
-    contextMenuX: contextMenu.x,
-    contextMenuY: contextMenu.y,
-    hasNode: !!contextMenu.node,
-    hasEdge: !!contextMenu.edge,
-    nodeId: contextMenu.node?.id,
-    edgeId: contextMenu.edge?.id
-  });
+  
 
-  console.log('🔴 EdgeTypes configurado:', edgeTypes);
-  console.log('🔴 Número de edges:', edges.length);
-  console.log('🔴 Edges disponibles:', edges.map(e => ({ id: e.id, type: e.type })));
-
+  
 
   return (
     <div className="editor-canvas-wrapper" style={{ height: '100%' }}>
