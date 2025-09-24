@@ -115,49 +115,69 @@ const ClaseNodeRF = ({ id, data, selected }) => {
 
       {/* Handles de conexión */}
       {/* Handles de conexión */}
-      {/* TOP */}
-      <Handle type="source" id="top-1" position={Position.Top} style={{ left: '15%', ...handleStyle }} />
-      <Handle type="source" id="top-2" position={Position.Top} style={{ left: '35%', ...handleStyle }} />
-      <Handle type="source" id="top-3" position={Position.Top} style={{ left: '65%', ...handleStyle }} />
-      <Handle type="source" id="top-4" position={Position.Top} style={{ left: '85%', ...handleStyle }} />
+      {/* TOP - ids namespaced por nodo y por tipo (src/tgt) */}
+      <Handle
+        type="source"
+        id={`${id}-top-src-1`}
+        position={Position.Top}
+        style={{ left: '15%', ...handleStyle }}
+        onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-top-src-1`, id); }}
+      />
+      <Handle
+        type="source"
+        id={`${id}-top-src-2`}
+        position={Position.Top}
+        style={{ left: '35%', ...handleStyle }}
+        onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-top-src-2`, id); }}
+      />
+      <Handle
+        type="source"
+        id={`${id}-top-src-3`}
+        position={Position.Top}
+        style={{ left: '65%', ...handleStyle }}
+        onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-top-src-3`, id); }}
+      />
+      <Handle
+        type="source"
+        id={`${id}-top-src-4`}
+        position={Position.Top}
+        style={{ left: '85%', ...handleStyle }}
+        onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-top-src-4`, id); }}
+      />
+      <Handle type="target" id={`${id}-top-tgt-1`} position={Position.Top} style={{ left: '15%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-top-tgt-1`, id); }} />
+      <Handle type="target" id={`${id}-top-tgt-2`} position={Position.Top} style={{ left: '35%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-top-tgt-2`, id); }} />
+      <Handle type="target" id={`${id}-top-tgt-3`} position={Position.Top} style={{ left: '65%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-top-tgt-3`, id); }} />
+      <Handle type="target" id={`${id}-top-tgt-4`} position={Position.Top} style={{ left: '85%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-top-tgt-4`, id); }} />
 
-      <Handle type="target" id="top-1" position={Position.Top} style={{ left: '15%', ...handleStyle }} />
-      <Handle type="target" id="top-2" position={Position.Top} style={{ left: '35%', ...handleStyle }} />
-      <Handle type="target" id="top-3" position={Position.Top} style={{ left: '65%', ...handleStyle }} />
-      <Handle type="target" id="top-4" position={Position.Top} style={{ left: '85%', ...handleStyle }} />
+      {/* RIGHT */} 
+      <Handle type="source" id={`${id}-right-src-1`} position={Position.Right} style={{ top: '15%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-right-src-1`, id); }} />
+      <Handle type="source" id={`${id}-right-src-2`} position={Position.Right} style={{ top: '35%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-right-src-2`, id); }} />
+      <Handle type="source" id={`${id}-right-src-3`} position={Position.Right} style={{ top: '65%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-right-src-3`, id); }} />
+      <Handle type="source" id={`${id}-right-src-4`} position={Position.Right} style={{ top: '85%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-right-src-4`, id); }} />
+      <Handle type="target" id={`${id}-right-tgt-1`} position={Position.Right} style={{ top: '15%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-right-tgt-1`, id); }} />
+      <Handle type="target" id={`${id}-right-tgt-2`} position={Position.Right} style={{ top: '35%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-right-tgt-2`, id); }} />
+      <Handle type="target" id={`${id}-right-tgt-3`} position={Position.Right} style={{ top: '65%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-right-tgt-3`, id); }} />
+      <Handle type="target" id={`${id}-right-tgt-4`} position={Position.Right} style={{ top: '85%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-right-tgt-4`, id); }} />
 
-      {/* RIGHT */}
-      <Handle type="source" id="right-1" position={Position.Right} style={{ top: '15%', ...handleStyle }} />
-      <Handle type="source" id="right-2" position={Position.Right} style={{ top: '35%', ...handleStyle }} />
-      <Handle type="source" id="right-3" position={Position.Right} style={{ top: '65%', ...handleStyle }} />
-      <Handle type="source" id="right-4" position={Position.Right} style={{ top: '85%', ...handleStyle }} />
-
-      <Handle type="target" id="right-1" position={Position.Right} style={{ top: '15%', ...handleStyle }} />
-      <Handle type="target" id="right-2" position={Position.Right} style={{ top: '35%', ...handleStyle }} />
-      <Handle type="target" id="right-3" position={Position.Right} style={{ top: '65%', ...handleStyle }} />
-      <Handle type="target" id="right-4" position={Position.Right} style={{ top: '85%', ...handleStyle }} />
-
-      {/* BOTTOM */}
-      <Handle type="source" id="bottom-1" position={Position.Bottom} style={{ left: '15%', ...handleStyle }} />
-      <Handle type="source" id="bottom-2" position={Position.Bottom} style={{ left: '35%', ...handleStyle }} />
-      <Handle type="source" id="bottom-3" position={Position.Bottom} style={{ left: '65%', ...handleStyle }} />
-      <Handle type="source" id="bottom-4" position={Position.Bottom} style={{ left: '85%', ...handleStyle }} />
-
-      <Handle type="target" id="bottom-1" position={Position.Bottom} style={{ left: '15%', ...handleStyle }} />
-      <Handle type="target" id="bottom-2" position={Position.Bottom} style={{ left: '35%', ...handleStyle }} />
-      <Handle type="target" id="bottom-3" position={Position.Bottom} style={{ left: '65%', ...handleStyle }} />
-      <Handle type="target" id="bottom-4" position={Position.Bottom} style={{ left: '85%', ...handleStyle }} />
+      {/* BOTTOM */} 
+      <Handle type="source" id={`${id}-bottom-src-1`} position={Position.Bottom} style={{ left: '15%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-bottom-src-1`, id); }} />
+      <Handle type="source" id={`${id}-bottom-src-2`} position={Position.Bottom} style={{ left: '35%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-bottom-src-2`, id); }} />
+      <Handle type="source" id={`${id}-bottom-src-3`} position={Position.Bottom} style={{ left: '65%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-bottom-src-3`, id); }} />
+      <Handle type="source" id={`${id}-bottom-src-4`} position={Position.Bottom} style={{ left: '85%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-bottom-src-4`, id); }} />
+      <Handle type="target" id={`${id}-bottom-tgt-1`} position={Position.Bottom} style={{ left: '15%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-bottom-tgt-1`, id); }} />
+      <Handle type="target" id={`${id}-bottom-tgt-2`} position={Position.Bottom} style={{ left: '35%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-bottom-tgt-2`, id); }} />
+      <Handle type="target" id={`${id}-bottom-tgt-3`} position={Position.Bottom} style={{ left: '65%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-bottom-tgt-3`, id); }} />
+      <Handle type="target" id={`${id}-bottom-tgt-4`} position={Position.Bottom} style={{ left: '85%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-bottom-tgt-4`, id); }} />
 
       {/* LEFT */}
-      <Handle type="source" id="left-1" position={Position.Left} style={{ top: '15%', ...handleStyle }} />
-      <Handle type="source" id="left-2" position={Position.Left} style={{ top: '35%', ...handleStyle }} />
-      <Handle type="source" id="left-3" position={Position.Left} style={{ top: '65%', ...handleStyle }} />
-      <Handle type="source" id="left-4" position={Position.Left} style={{ top: '85%', ...handleStyle }} />
-
-      <Handle type="target" id="left-1" position={Position.Left} style={{ top: '15%', ...handleStyle }} />
-      <Handle type="target" id="left-2" position={Position.Left} style={{ top: '35%', ...handleStyle }} />
-      <Handle type="target" id="left-3" position={Position.Left} style={{ top: '65%', ...handleStyle }} />
-      <Handle type="target" id="left-4" position={Position.Left} style={{ top: '85%', ...handleStyle }} />
+      <Handle type="source" id={`${id}-left-src-1`} position={Position.Left} style={{ top: '15%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-left-src-1`, id); }} />
+      <Handle type="source" id={`${id}-left-src-2`} position={Position.Left} style={{ top: '35%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-left-src-2`, id); }} />
+      <Handle type="source" id={`${id}-left-src-3`} position={Position.Left} style={{ top: '65%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-left-src-3`, id); }} />
+      <Handle type="source" id={`${id}-left-src-4`} position={Position.Left} style={{ top: '85%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-left-src-4`, id); }} />
+      <Handle type="target" id={`${id}-left-tgt-1`} position={Position.Left} style={{ top: '15%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-left-tgt-1`, id); }} />
+      <Handle type="target" id={`${id}-left-tgt-2`} position={Position.Left} style={{ top: '35%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-left-tgt-2`, id); }} />
+      <Handle type="target" id={`${id}-left-tgt-3`} position={Position.Left} style={{ top: '65%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-left-tgt-3`, id); }} />
+      <Handle type="target" id={`${id}-left-tgt-4`} position={Position.Left} style={{ top: '85%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-left-tgt-4`, id); }} />
 
 
      

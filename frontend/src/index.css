@@ -87,6 +87,7 @@ aside::-webkit-scrollbar-thumb {
 aside::-webkit-scrollbar-track {
   background: transparent;
 }
+.editor-sidebar::-webkit-scrollbar { width: 12px; }
 
 /* tooltip simple (si se desea usar) */
 [title] {

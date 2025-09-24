@@ -6,10 +6,14 @@ const ITEMS = [
   { id: 'interface', label: 'Interface', hint: 'Arrastrar al lienzo', bg: 'bg-emerald-100', border: 'border-emerald-200', type: 'interfaceNode' },
 ];
 
+// Reemplazar RELACIONES por esta versión con tipos UML claros
 const RELACIONES = [
-  { id: 'asociacion', label: 'Asociación', hint: 'Arrastrar para crear relación', bg: 'bg-white', border: 'border-gray-200', type: 'relacion-asociacion' },
-  { id: 'composicion', label: 'Composición', hint: 'Arrastrar para crear relación', bg: 'bg-white', border: 'border-gray-200', type: 'relacion-composicion' },
-  { id: 'generalizacion', label: 'Generalización', hint: 'Arrastrar para crear relación', bg: 'bg-white', border: 'border-gray-200', type: 'relacion-generalizacion' },
+  { id: 'asociacion', label: 'Asociación', hint: 'Línea simple', bg: 'bg-white', border: 'border-gray-200', type: 'relacion-asociacion' },
+  { id: 'agregacion', label: 'Agregación', hint: 'Diamante hueco (agregación)', bg: 'bg-white', border: 'border-gray-200', type: 'relacion-agregacion' },
+  { id: 'composicion', label: 'Composición', hint: 'Diamante relleno (composición)', bg: 'bg-white', border: 'border-gray-200', type: 'relacion-composicion' },
+  { id: 'generalizacion', label: 'Generalización', hint: 'Triángulo hueco (generalización)', bg: 'bg-white', border: 'border-gray-200', type: 'relacion-generalizacion' },
+  { id: 'realizacion', label: 'Realización', hint: 'Línea punteada + triángulo hueco (realización)', bg: 'bg-white', border: 'border-gray-200', type: 'relacion-realizacion' },
+  { id: 'association-class', label: 'Association Class', hint: 'Asociación con caja de clase', bg: 'bg-white', border: 'border-gray-200', type: 'relacion-association-class' },
 ];
 
 const TRANSPARENT_PNG =
@@ -83,177 +87,167 @@ const Sidebar = ({ onBack = null }) => {
 
   return (
     <aside
-      className={`editor-sidebar transition-all duration-300 ${collapsed ? 'w-16' : 'w-72'} bg-white border-r border-green-100 shadow-lg flex flex-col h-full`}
-      style={{ minHeight: '100vh' }}
+      className="editor-sidebar"
+      style={{
+        height: '100vh',
+        overflowY: 'auto',
+        minWidth: 320, // antes 240, ahora más ancho
+        padding: '1.5rem 1rem 4rem 1rem', // más espacio interno
+      }}
     >
-      {!collapsed && (
-        <button
-          className="sidebar-back-button"
-          onClick={() => {
-            if (typeof onBack === 'function') {
-              try { return onBack(); } catch (e) { console.error(e); }
-            }
-            return navigate(-1);
-          }}
-          title="Volver"
-        >
-          Volver
-        </button>
-      )}
-
-      <div className="p-4 bg-green-600 text-white">
-        <div className="flex items-center justify-between">
-          {!collapsed && (
-            <h1 className="text-xl font-bold flex items-center">
-              <span className="bg-white text-green-600 rounded-lg w-8 h-8 flex items-center justify-center mr-2">U</span>
-              UML Editor
-            </h1>
-          )}
-          <button
-            onClick={() => setCollapsed((c) => !c)}
-            className="p-1.5 rounded-md hover:bg-green-700 transition-colors"
-            title={collapsed ? 'Expandir' : 'Contraer'}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-white">
-              {collapsed ? (
-                <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              ) : (
-                <path d="M15 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              )}
-            </svg>
-          </button>
-        </div>
-
-        {!collapsed && (
-          <div className="mt-4 relative">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar elementos o relaciones..."
-              className="w-full px-4 py-2 pl-10 rounded-lg bg-green-700 placeholder-green-200 text-white border border-green-500 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-transparent"
-            />
-            <span className="absolute left-3 top-2.5 text-green-200">🔍</span>
-          </div>
-        )}
-      </div>
-
-      {/* Contenedor principal con scroll */}
-      <div className="flex-1 overflow-y-auto flex flex-col p-4">
-        {!collapsed ? (
-          <>
-            <div className="mb-4">
-              <h2 className="text-sm font-semibold text-green-800 uppercase tracking-wide mb-2">Elementos UML</h2>
-              <p className="text-xs text-green-600">Arrastra elementos al lienzo para comenzar</p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto pr-2 space-y-4">
-              <div className="space-y-3">
-                {items.map((it) => (
-                  <div
-                    key={it.id}
-                    draggable
-                    onDragStart={(e) => onDragStart(e, it)}
-                    onDragEnd={onDragEnd}
-                    title={it.hint}
-                    className={`flex items-center p-3 rounded-xl cursor-grab border ${it.border} ${it.bg} hover:shadow-md transition-all duration-200`}
-                  >
-                    <div className="flex items-center justify-center rounded-lg bg-white w-10 h-10 shadow-inner border border-green-200">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-green-600">
-                        <rect x="3" y="4" width="18" height="16" stroke="currentColor" strokeWidth="1.2" rx="2" />
-                        <path d="M3 10h18" stroke="currentColor" strokeWidth="1.2" />
-                        <path d="M8 4v6" stroke="currentColor" strokeWidth="1.2" />
-                      </svg>
-                    </div>
-
-                    <div className="ml-3 flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-green-900 truncate">{it.label}</div>
-                      <div className="text-xs text-green-600 truncate">{it.hint}</div>
-                    </div>
-
-                    <div className="text-green-400 text-lg">⬌</div>
-                  </div>
-                ))}
-
-                {items.length === 0 && (
-                  <div className="p-4 text-center text-sm text-green-600 border border-green-200 rounded-xl bg-green-50">
-                    No se encontraron elementos
-                  </div>
-                )}
+      <div className="bg-green-50 p-0" style={{ minWidth: 240, height: '100vh' }}>
+        <style>{`
+          .sidebar-scroll {
+            height: 100vh;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #16a34a #f3f4f6;
+          }
+          .sidebar-scroll::-webkit-scrollbar { width: 8px; }
+          .sidebar-scroll::-webkit-scrollbar-track { background: #f3f4f6; border-radius: 8px; }
+          .sidebar-scroll::-webkit-scrollbar-thumb { background: #16a34a; border-radius: 8px; }
+          .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: #15803d; }
+        `}</style>
+        <div className="sidebar-scroll p-4">
+          {!collapsed ? (
+            <>
+              <div className="mb-6">
+                <h2 className="text-sm font-semibold text-green-800 uppercase tracking-wide mb-2">Elementos UML</h2>
+                <p className="text-xs text-green-600">Arrastra elementos al lienzo para comenzar</p>
               </div>
 
-              <div className="pt-4">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Relaciones UML</h3>
-                <p className="text-xs text-gray-500 mb-3">Arrastra una relación para usarla en el lienzo</p>
-
-                <div className="space-y-2">
-                  {relacionesFiltradas.map((r) => (
+              <div className="pr-2 space-y-4">
+                <div className="space-y-3">
+                  {items.map((it) => (
                     <div
-                      key={r.id}
+                      key={it.id}
                       draggable
-                      onDragStart={(e) => onDragStart(e, r)}
+                      onDragStart={(e) => onDragStart(e, it)}
                       onDragEnd={onDragEnd}
-                      title={r.hint}
-                      className={`flex items-center p-3 rounded-xl cursor-grab border ${r.border} ${r.bg} hover:shadow-sm transition-all duration-150`}
+                      title={it.hint}
+                      className={`flex items-center p-3 rounded-xl cursor-grab border ${it.border} ${it.bg} hover:shadow-md transition-all duration-200`}
                     >
-                      <div className="flex items-center justify-center rounded-lg bg-gray-50 w-10 h-10 shadow-inner border border-gray-200">
-                        {r.id === 'asociacion' && (
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-gray-700">
-                            <path d="M3 12h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                          </svg>
-                        )}
-                        {r.id === 'composicion' && (
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-gray-700">
-                            <path d="M3 12h18" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                            <rect x="10" y="6" width="4" height="12" fill="currentColor" />
-                          </svg>
-                        )}
-                        {r.id === 'generalizacion' && (
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-gray-700">
-                            <path d="M3 12h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                            <path d="M20 12l-4-3v6l4-3z" fill="currentColor" />
-                          </svg>
-                        )}
+                      <div className="flex items-center justify-center rounded-lg bg-white w-10 h-10 shadow-inner border border-green-200">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-green-600">
+                          <rect x="3" y="4" width="18" height="16" stroke="currentColor" strokeWidth="1.2" rx="2" />
+                          <path d="M3 10h18" stroke="currentColor" strokeWidth="1.2" />
+                          <path d="M8 4v6" stroke="currentColor" strokeWidth="1.2" />
+                        </svg>
                       </div>
 
                       <div className="ml-3 flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-gray-800 truncate">{r.label}</div>
-                        <div className="text-xs text-gray-500 truncate">{r.hint}</div>
+                        <div className="text-sm font-semibold text-green-900 truncate">{it.label}</div>
+                        <div className="text-xs text-green-600 truncate">{it.hint}</div>
                       </div>
 
-                      <div className="text-gray-300 text-lg">↕</div>
+                      <div className="text-green-400 text-lg">⬌</div>
                     </div>
                   ))}
 
-                  {relacionesFiltradas.length === 0 && (
-                    <div className="p-3 text-center text-sm text-gray-500 border border-gray-100 rounded bg-gray-50">
-                      No se encontraron relaciones
+                  {items.length === 0 && (
+                    <div className="p-4 text-center text-sm text-green-600 border border-green-200 rounded-xl bg-green-50">
+                      No se encontraron elementos
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex flex-col items-center gap-3">
-            {ITEMS.map((it) => (
-              <div
-                key={it.id}
-                draggable
-                onDragStart={(e) => onDragStart(e, it)}
-                onDragEnd={onDragEnd}
-                className="w-12 h-12 flex items-center justify-center rounded-xl bg-white border border-green-200 hover:shadow cursor-grab"
-                title={it.label}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-green-600">
-                  <rect x="3" y="4" width="18" height="16" stroke="currentColor" strokeWidth="1" rx="2" />
-                </svg>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Eliminar el botón "Crear nuevo elemento" */}
+                <div className="pt-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Relaciones UML</h3>
+                  <p className="text-xs text-gray-500 mb-3">Arrastra una relación para usarla en el lienzo</p>
+
+                  <div className="space-y-2">
+                    {relacionesFiltradas.map((r) => (
+                      <div
+                        key={r.id}
+                        draggable
+                        onDragStart={(e) => onDragStart(e, r)}
+                        onDragEnd={onDragEnd}
+                        title={r.hint}
+                        className={`flex items-center p-3 rounded-xl cursor-grab border ${r.border} ${r.bg} hover:shadow-sm transition-all duration-150`}
+                      >
+                        <div className="flex items-center justify-center rounded-lg bg-gray-50 w-10 h-10 shadow-inner border border-gray-200">
+                          {r.id === 'asociacion' && (
+                            // Línea simple
+                            <svg width="22" height="12" viewBox="0 0 22 12" fill="none">
+                              <line x1="1" y1="6" x2="21" y2="6" stroke="#374151" strokeWidth="1.6" strokeLinecap="round" />
+                            </svg>
+                          )}
+                          {r.id === 'agregacion' && (
+                            // Diamante hueco en el extremo derecho
+                            <svg width="22" height="12" viewBox="0 0 22 12" fill="none">
+                              <line x1="1" y1="6" x2="14" y2="6" stroke="#374151" strokeWidth="1.6" strokeLinecap="round" />
+                              <polygon points="14,6 17,3 20,6 17,9" fill="white" stroke="#374151" strokeWidth="1.4" />
+                            </svg>
+                          )}
+                          {r.id === 'composicion' && (
+                            // Diamante relleno en el extremo derecho
+                            <svg width="22" height="12" viewBox="0 0 22 12" fill="none">
+                              <line x1="1" y1="6" x2="14" y2="6" stroke="#374151" strokeWidth="1.6" strokeLinecap="round" />
+                              <polygon points="14,6 17,3 20,6 17,9" fill="#374151" stroke="#374151" strokeWidth="1.2" />
+                            </svg>
+                          )}
+                          {r.id === 'generalizacion' && (
+                            // Triángulo normal apuntando a la derecha (base vertical)
+                            <svg width="22" height="12" viewBox="0 0 22 12" fill="none">
+                              <line x1="1" y1="6" x2="14" y2="6" stroke="#374151" strokeWidth="1.6" strokeLinecap="round" />
+                              <polygon points="14,2 14,10 20,6" fill="white" stroke="#374151" strokeWidth="1.4" />
+                            </svg>
+                          )}
+                          {r.id === 'realizacion' && (
+                            // Línea punteada + triángulo hueco
+                            <svg width="24" height="12" viewBox="0 0 24 12" fill="none">
+                              <line x1="1" y1="6" x2="14" y2="6" stroke="#374151" strokeWidth="1.4" strokeDasharray="3 3" strokeLinecap="round" />
+                              <polygon points="14,6 20,2 20,10" fill="white" stroke="#374151" strokeWidth="1.2" />
+                            </svg>
+                          )}
+                          {r.id === 'association-class' && (
+                            // Línea con pequeña caja de clase en el centro/derecha
+                            <svg width="28" height="16" viewBox="0 0 28 16" fill="none">
+                              <line x1="1" y1="8" x2="10" y2="8" stroke="#374151" strokeWidth="1.6" strokeLinecap="round" />
+                              <rect x="10" y="2" width="8" height="8" fill="white" stroke="#374151" strokeWidth="1.2" />
+                              <line x1="18" y1="8" x2="27" y2="8" stroke="#374151" strokeWidth="1.6" strokeLinecap="round" />
+                            </svg>
+                          )}
+                        </div>
+
+                        <div className="ml-3 flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-gray-800 truncate">{r.label}</div>
+                          <div className="text-xs text-gray-500 truncate">{r.hint}</div>
+                        </div>
+
+                        <div className="text-gray-300 text-lg">↕</div>
+                      </div>
+                    ))}
+
+                    {relacionesFiltradas.length === 0 && (
+                      <div className="p-3 text-center text-sm text-gray-500 border border-gray-100 rounded bg-gray-50">
+                        No se encontraron relaciones
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-3">
+              {ITEMS.map((it) => (
+                <div
+                  key={it.id}
+                  draggable
+                  onDragStart={(e) => onDragStart(e, it)}
+                  onDragEnd={onDragEnd}
+                  className="w-12 h-12 flex items-center justify-center rounded-xl bg-white border border-green-200 hover:shadow cursor-grab"
+                  title={it.label}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-green-600">
+                    <rect x="3" y="4" width="18" height="16" stroke="currentColor" strokeWidth="1" rx="2" />
+                  </svg>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </aside>
   );
 };

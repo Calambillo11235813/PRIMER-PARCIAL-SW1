@@ -67,6 +67,7 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
   // Ref del wrapper del canvas y referencia a reactFlowInstance
   const reactFlowWrapper = useRef(null);
   const reactFlowInstanceRef = useRef(null);
+  const lastDropRef = useRef(0);
 
   const onReactFlowInit = (instance) => {
     reactFlowInstanceRef.current = instance;
@@ -243,7 +244,7 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
 
     // Prevenir eventos duplicados
     const now = Date.now();
-    if (now - lastDropRef.current < 300) {
+    if (now - (lastDropRef.current || 0) < 300) {
       console.warn('Evento duplicado detectado, ignorando...');
       return;
     }
@@ -257,7 +258,7 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
 
     // Calcular posición CORREGIDA (considerando scroll y transformaciones)
     const bounds = reactFlowWrapper.current.getBoundingClientRect();
-    const scale = reactFlowInstance?.zoom || 1;
+    const scale = reactFlowInstanceRef.current?.zoom || 1;
     const sidebarWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--editor-sidebar-width'), 10) || 0;
 
     const posicion = {
@@ -335,14 +336,14 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
       edge,
     });
   };
-  // DEBUG adicional: registrar inmediatamente (uso de ref sincronizada)
-  setTimeout(() => {
+  // DEBUG adicional: registrar cuando cambie el context menu (sin setTimeout)
+  useEffect(() => {
     try {
       console.debug('[EditorDiagrama] after setContextMenu, contextMenuRef:', JSON.parse(JSON.stringify(contextMenuRef.current)));
     } catch (err) {
       console.debug('[EditorDiagrama] after setContextMenu, contextMenuRef (non-serializable):', contextMenuRef.current);
     }
-  }, 50);
+  }, [contextMenu]);
 
 
 
@@ -598,6 +599,137 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     window.addEventListener('edge-points-change', handler);
     return () => window.removeEventListener('edge-points-change', handler);
   }, [setEdges]);
+
+  // helper: elegir lado y handle index en base a coordenada dentro del nodo
+  const pickHandleForNode = (node, x, y, which) => {
+    // which: 'source' | 'target' -> determina sufijo src/tgt en el id del handle
+    const nw = node.position.x;
+    const nh = node.position.y;
+    const w = node.width || 180; // fallback si no hay width/height
+    const h = node.height || 120;
+    const cx = nw + w / 2;
+    const cy = nh + h / 2;
+    const dx = x - cx;
+    const dy = y - cy;
+    const horizontal = Math.abs(dx) > Math.abs(dy);
+    let side;
+    if (horizontal) side = dx > 0 ? 'right' : 'left';
+    else side = dy > 0 ? 'bottom' : 'top';
+    // elegir índice 1..4 según la posición relativa a la arista
+    let idx = 1;
+    if (side === 'left' || side === 'right') {
+      const rel = (y - nh) / h; // 0..1
+      idx = Math.min(4, Math.max(1, Math.ceil(rel * 4)));
+    } else {
+      const rel = (x - nw) / w;
+      idx = Math.min(4, Math.max(1, Math.ceil(rel * 4)));
+    }
+    const typePart = which === 'source' ? 'src' : 'tgt';
+    // Devolver id exactamente igual al id de Handle en ClaseNodeRF: `${nodeId}-${side}-${typePart}-${idx}`
+    return `${node.id}-${side}-${typePart}-${idx}`;
+  };
+
+  useEffect(() => {
+    const handler = (ev) => {
+      const { id: edgeId, which, point, clientX, clientY } = ev.detail || {};
+      if (!edgeId || !which || !point) return;
+      // Primero intento detectar un handle DOM usando clientX/clientY (más fiable)
+      if (typeof clientX === 'number' && typeof clientY === 'number') {
+        try {
+          const el = document.elementFromPoint(clientX, clientY);
+          const handleEl = el && (el.closest ? el.closest('.react-flow__handle') : null);
+          // Fallback buscar cualquier elemento con data-handleid o id en el área
+          const foundHandle = handleEl || (el && (el.getAttribute('data-handleid') || el.id) ? el : null);
+          if (foundHandle) {
+            // extraer nodeId del contenedor del nodo
+            const nodeEl = foundHandle.closest && foundHandle.closest('.react-flow__node');
+            const nodeId = nodeEl ? nodeEl.getAttribute('data-id') || nodeEl.getAttribute('id') : null;
+            const handleId = foundHandle.getAttribute('data-handleid') || foundHandle.getAttribute('id') || null;
+            if (nodeId && handleId) {
+              setEdges((eds) => eds.map(e => {
+                if (e.id !== edgeId) return e;
+                if (which === 'source') {
+                  return { ...e, source: nodeId, sourceHandle: handleId };
+                } else {
+                  return { ...e, target: nodeId, targetHandle: handleId };
+                }
+              }));
+              return; // hecho: atado al handle detectado
+            }
+          }
+        } catch (err) {
+          console.warn('[EditorDiagrama] error detecting handle by DOM', err);
+        }
+      }
+      // fallback: buscar nodo por posición (antigua lógica)
+      const found = nodes.find(n => {
+        const nx = n.position.x;
+        const ny = n.position.y;
+        const w = n.width || 180;
+        const h = n.height || 120;
+        return point.x >= nx && point.x <= nx + w && point.y >= ny && point.y <= ny + h;
+      });
+      if (found) {
+        const handleId = pickHandleForNode(found, point.x, point.y, which);
+        setEdges((eds) => eds.map(e => {
+          if (e.id !== edgeId) return e;
+          if (which === 'source') {
+            return { ...e, source: found.id, sourceHandle: handleId };
+          } else {
+            return { ...e, target: found.id, targetHandle: handleId };
+          }
+        }));
+      } else {
+        console.debug && console.debug('[EditorDiagrama] endpoint released on empty space -> no reattach', edgeId, which, point);
+      }
+    };
+    window.addEventListener('edge-endpoint-change', handler);
+    return () => window.removeEventListener('edge-endpoint-change', handler);
+  }, [nodes, setEdges]);
+
+  // Highlight visual mientras se arrastra endpoint sobre nodos
+  const [highlightedNodeId, setHighlightedNodeId] = useState(null);
+  // Estado de asignación por click (esperando que el usuario haga click en un handle)
+  const [assignPending, setAssignPending] = useState(null); // { edgeId, which }
+  useEffect(() => {
+    // Exponer helper global temporal que los Handles llamarán cuando sean clickeados
+    if (assignPending) {
+      window.assignSelectedEdge = (handleId, nodeId) => {
+        const { edgeId, which } = assignPending;
+        console.debug && console.debug('[EditorDiagrama] assignSelectedEdge called', { edgeId, which, handleId, nodeId });
+        setEdges((eds) => eds.map(e => {
+          if (e.id !== edgeId) return e;
+          if (which === 'source') {
+            return { ...e, source: nodeId, sourceHandle: handleId };
+          } else {
+            return { ...e, target: nodeId, targetHandle: handleId };
+          }
+        }));
+        setAssignPending(null);
+        delete window.assignSelectedEdge;
+        setToast({ type: 'success', message: 'Relación asignada al punto seleccionado' });
+      };
+      setToast({ type: 'info', message: 'Click en el punto verde donde quieres anclar la relación' });
+    } else {
+      // limpiar helper global si no hay pending
+      if (window.assignSelectedEdge) delete window.assignSelectedEdge;
+    }
+    return () => { if (window.assignSelectedEdge) delete window.assignSelectedEdge; };
+  }, [assignPending, setEdges]);
+
+  // Escuchar la petición de "selección rápida" desde RelacionNode
+  useEffect(() => {
+    const handler = (ev) => {
+      const detail = ev.detail || {};
+      const edgeId = detail.id;
+      const which = detail.which;
+      if (!edgeId || !which) return;
+      console.debug && console.debug('[EditorDiagrama] entering assignPending mode for', { edgeId, which });
+      setAssignPending({ edgeId, which });
+    };
+    window.addEventListener('edge-select-for-handle-assign', handler);
+    return () => window.removeEventListener('edge-select-for-handle-assign', handler);
+  }, []);
 
   return (
     <div className="editor-canvas-wrapper" style={{ height: '100%' }} ref={reactFlowWrapper}>
