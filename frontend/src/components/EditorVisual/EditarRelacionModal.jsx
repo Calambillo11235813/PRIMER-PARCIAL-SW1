@@ -1,103 +1,206 @@
-// EditarRelacionModal.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+
+// Constantes UML reutilizables
+const TIPOS_RELACION = {
+  ASOCIACION: 'asociacion',
+  COMPOSICION: 'composicion',
+  AGREGACION: 'agregacion',
+  HERENCIA: 'herencia',
+  REALIZACION: 'realizacion',
+  DEPENDENCIA: 'dependencia'
+};
+
+const MULTIPLICIDADES = ['1', 'N', '0..1', '1..*', '0..*', '*'];
+
+const TIPOS_RELACION_LABELS = {
+  [TIPOS_RELACION.ASOCIACION]: 'Asociación —',
+  [TIPOS_RELACION.COMPOSICION]: 'Composición ● (Todo-Parte fuerte)',
+  [TIPOS_RELACION.AGREGACION]: 'Agregación ◇ (Todo-Parte débil)',
+  [TIPOS_RELACION.HERENCIA]: 'Herencia △ (Generalización)',
+  [TIPOS_RELACION.REALIZACION]: 'Realización ⟲ (Interface)',
+  [TIPOS_RELACION.DEPENDENCIA]: 'Dependencia ⤴ (Uso temporal)'
+};
+
+// Componente de select reutilizable
+const SelectUML = ({ label, value, onChange, options, optionLabels = {}, className = '' }) => (
+  <div className={`mb-4 ${className}`}>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      {label}
+    </label>
+    <select 
+      value={value}
+      onChange={onChange}
+      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-colors"
+    >
+      {options.map(opcion => (
+        <option key={opcion} value={opcion}>
+          {optionLabels[opcion] || opcion}
+        </option>
+      ))}
+    </select>
+  </div>
+);
+
+// Preview visual de la relación
+const PreviewRelacion = ({ tipo, multiplicidadSource, multiplicidadTarget }) => {
+  const getIconoTipo = (tipo) => {
+    const iconos = {
+      [TIPOS_RELACION.COMPOSICION]: '●',
+      [TIPOS_RELACION.AGREGACION]: '◇',
+      [TIPOS_RELACION.HERENCIA]: '△',
+      [TIPOS_RELACION.REALIZACION]: '⟲',
+      [TIPOS_RELACION.DEPENDENCIA]: '⤴',
+      [TIPOS_RELACION.ASOCIACION]: '—'
+    };
+    return iconos[tipo] || '—';
+  };
+
+  const getColorTipo = (tipo) => {
+    const colores = {
+      [TIPOS_RELACION.COMPOSICION]: 'text-red-600',
+      [TIPOS_RELACION.AGREGACION]: 'text-blue-600',
+      [TIPOS_RELACION.HERENCIA]: 'text-green-600',
+      [TIPOS_RELACION.REALIZACION]: 'text-purple-600',
+      [TIPOS_RELACION.DEPENDENCIA]: 'text-orange-600',
+      [TIPOS_RELACION.ASOCIACION]: 'text-gray-600'
+    };
+    return colores[tipo] || 'text-gray-600';
+  };
+
+  return (
+    <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+      <div className="text-xs text-green-600 font-medium mb-2">Vista Previa de la Relación:</div>
+      <div className="flex items-center justify-center text-sm font-mono space-x-3">
+        <span className="bg-white px-3 py-1 rounded border border-gray-300 shadow-sm">
+          {multiplicidadSource}
+        </span>
+        <span className={`text-lg font-bold ${getColorTipo(tipo)}`}>
+          {getIconoTipo(tipo)}
+        </span>
+        <span className="bg-white px-3 py-1 rounded border border-gray-300 shadow-sm">
+          {multiplicidadTarget}
+        </span>
+      </div>
+      <div className="text-xs text-gray-500 text-center mt-2">
+        {TIPOS_RELACION_LABELS[tipo]}
+      </div>
+    </div>
+  );
+};
 
 const EditarRelacionModal = ({ relacion, onGuardar, onCancelar }) => {
-  const [tipo, setTipo] = useState('asociacion');
-  const [multiplicidadSource, setMultiplicidadSource] = useState('1');
-  const [multiplicidadTarget, setMultiplicidadTarget] = useState('N');
+  const [formData, setFormData] = useState({
+    tipo: TIPOS_RELACION.ASOCIACION,
+    multiplicidadSource: '1',
+    multiplicidadTarget: 'N'
+  });
 
+  // Inicializar con datos de la relación
   useEffect(() => {
     if (relacion) {
-      setTipo(relacion.data?.tipo || 'asociacion');
-      setMultiplicidadSource(relacion.data?.multiplicidadSource || '1');
-      setMultiplicidadTarget(relacion.data?.multiplicidadTarget || 'N');
+      setFormData({
+        tipo: relacion.data?.tipo || TIPOS_RELACION.ASOCIACION,
+        multiplicidadSource: relacion.data?.multiplicidadSource || '1',
+        multiplicidadTarget: relacion.data?.multiplicidadTarget || 'N'
+      });
     }
   }, [relacion]);
 
-  const handleGuardar = () => {
-    onGuardar({
+  // Handlers con useCallback para optimización
+  const updateField = useCallback((field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleGuardar = useCallback(() => {
+    onGuardar?.({
       ...relacion,
       data: {
         ...relacion.data,
-        tipo,
-        multiplicidadSource,
-        multiplicidadTarget,
+        ...formData
       },
     });
-  };
+  }, [relacion, formData, onGuardar]);
 
-  const opcionesMultiplicidad = ['1', 'N', '0..1', '1..*', '0..*', '*'];
+  // Manejar Enter para guardar
+  const handleKeyPress = useCallback((e) => {
+    if (e.key === 'Enter') {
+      handleGuardar();
+    }
+  }, [handleGuardar]);
+
+  // Efecto para manejar teclado
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [handleKeyPress]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-96 max-w-md">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-2xl w-96 max-w-md mx-4">
+        {/* Header con tema verde */}
+        <div className="bg-green-600 text-white p-6 rounded-t-xl">
+          <h2 className="text-xl font-bold flex items-center">
+            🔗 Editar Relación UML
+          </h2>
+          <p className="text-green-100 text-sm mt-1">
+            Configure los detalles de la relación entre clases
+          </p>
+        </div>
+
         <div className="p-6">
-          <h2 className="text-xl font-bold text-green-800 mb-4">Editar Relación</h2>
-          
+          {/* Vista previa */}
+          <PreviewRelacion 
+            tipo={formData.tipo}
+            multiplicidadSource={formData.multiplicidadSource}
+            multiplicidadTarget={formData.multiplicidadTarget}
+          />
+
           {/* Tipo de Relación */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tipo de Relación
-            </label>
-            <select 
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            >
-              <option value="asociacion">Asociación</option>
-              <option value="composicion">Composición</option>
-              <option value="agregacion">Agregación</option>
-              <option value="herencia">Herencia</option>
-              <option value="realizacion">Realización</option>
-              <option value="dependencia">Dependencia</option>
-            </select>
+          <SelectUML
+            label="Tipo de Relación"
+            value={formData.tipo}
+            onChange={(e) => updateField('tipo', e.target.value)}
+            options={Object.values(TIPOS_RELACION)}
+            optionLabels={TIPOS_RELACION_LABELS}
+          />
+
+          {/* Multiplicidades */}
+          <div className="grid grid-cols-2 gap-4">
+            <SelectUML
+              label="Multiplicidad Origen"
+              value={formData.multiplicidadSource}
+              onChange={(e) => updateField('multiplicidadSource', e.target.value)}
+              options={MULTIPLICIDADES}
+              className="mb-0"
+            />
+            <SelectUML
+              label="Multiplicidad Destino"
+              value={formData.multiplicidadTarget}
+              onChange={(e) => updateField('multiplicidadTarget', e.target.value)}
+              options={MULTIPLICIDADES}
+              className="mb-0"
+            />
           </div>
 
-          {/* Multiplicidad Origen */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Multiplicidad Origen
-            </label>
-            <select 
-              value={multiplicidadSource}
-              onChange={(e) => setMultiplicidadSource(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            >
-              {opcionesMultiplicidad.map(op => (
-                <option key={op} value={op}>{op}</option>
-              ))}
-            </select>
+          {/* Información de multiplicidades */}
+          <div className="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
+            <strong>Multiplicidades comunes:</strong> 1 (uno), N (muchos), 0..1 (opcional), 
+            1..* (uno o más), 0..* (cero o más), * (muchos)
           </div>
 
-          {/* Multiplicidad Destino */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Multiplicidad Destino
-            </label>
-            <select 
-              value={multiplicidadTarget}
-              onChange={(e) => setMultiplicidadTarget(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            >
-              {opcionesMultiplicidad.map(op => (
-                <option key={op} value={op}>{op}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Botones */}
-          <div className="flex justify-end space-x-3">
+          {/* Botones de acción */}
+          <div className="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
             <button
               onClick={onCancelar}
-              className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              className="px-5 py-2.5 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-200"
             >
               Cancelar
             </button>
             <button
               onClick={handleGuardar}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+              className="px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-200"
             >
-              Guardar Cambios
+              💾 Guardar
             </button>
           </div>
         </div>
@@ -106,4 +209,4 @@ const EditarRelacionModal = ({ relacion, onGuardar, onCancelar }) => {
   );
 };
 
-export default EditarRelacionModal;
+export default React.memo(EditarRelacionModal);

@@ -1,51 +1,107 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Handle, Position } from '@xyflow/react';
+
+/**
+ * Componente para grupo de handles - Evita repetición de código
+ */
+const HandleGroup = ({ position, idBase, offsets }) => {
+  const isVertical = position === Position.Left || position === Position.Right;
+  const styleProperty = isVertical ? 'top' : 'left';
+  
+  const handleStyle = {
+    width: 10, 
+    height: 10, 
+    background: '#22c55e', 
+    border: '2px solid #fff', 
+    borderRadius: '50%'
+  };
+
+  return (
+    <>
+      {offsets.map(offset => (
+        <React.Fragment key={offset}>
+          <Handle
+            type="source"
+            id={`${idBase}-src-${offset}`}
+            position={position}
+            style={{ [styleProperty]: `${offset}%`, ...handleStyle }}
+            onClick={() => { 
+              if (window.assignSelectedEdge) window.assignSelectedEdge(`${idBase}-src-${offset}`, idBase.split('-')[0]);
+            }}
+          />
+          <Handle
+            type="target"
+            id={`${idBase}-tgt-${offset}`}
+            position={position}
+            style={{ [styleProperty]: `${offset}%`, ...handleStyle }}
+            onClick={() => { 
+              if (window.assignSelectedEdge) window.assignSelectedEdge(`${idBase}-tgt-${offset}`, idBase.split('-')[0]);
+            }}
+          />
+        </React.Fragment>
+      ))}
+    </>
+  );
+};
+
+/**
+ * Tipos de datos (simulados para JavaScript, en TypeScript sería más robusto)
+ */
+const VisibilidadTypes = {
+  PUBLIC: 'public',
+  PRIVATE: 'private', 
+  PROTECTED: 'protected',
+  PACKAGE: 'package'
+};
 
 /**
  * Nodo de clase estilo Enterprise Architect UML 2.5 (3 compartimentos).
  * data: { nombre, estereotipo, atributos: [{vis, nombre, tipo, mult}], metodos: [{vis, nombre, firma}], color? }
  */
-const ClaseNodeRF = ({ id, data, selected }) => {
+const ClaseNodeRF = ({ id, data, selected, onEdgeDragStart }) => {
   const nombre = data?.nombre || 'Clase';
   const estereotipo = data?.estereotipo;
   const atributos = data?.atributos || [];
   const metodos = data?.metodos || [];
   const esAbstracta = data?.esAbstracta || false;
 
-  // Función para obtener el símbolo de visibilidad UML
-  const obtenerSimboloVisibilidad = (vis) => {
+  // Función para obtener el símbolo de visibilidad UML (memoizada)
+  const obtenerSimboloVisibilidad = useCallback((vis) => {
     switch (vis) {
-      case 'public': return '+';
-      case 'private': return '-';
-      case 'protected': return '#';
-      case 'package': return '~';
+      case VisibilidadTypes.PUBLIC: return '+';
+      case VisibilidadTypes.PRIVATE: return '-';
+      case VisibilidadTypes.PROTECTED: return '#';
+      case VisibilidadTypes.PACKAGE: return '~';
       default: return vis || '+';
     }
-  };
+  }, []);
 
-  // Nuevo: función para iniciar el drag
-  const handleMouseDown = (e) => {
-    //si el evento viene de la flecha no hagas nada 
-    if (e.target.id == `arrow-${id}`) {
-
-      return;
-    }
+  // Manejo mejorado de eventos de drag
+  const handleMouseDown = useCallback((e) => {
+    if (e.target.id === `arrow-${id}`) return;
     e.stopPropagation();
 
-    // Llama a una función global/contexto para iniciar la conexión
-    if (window.startEdgeDrag) window.startEdgeDrag(id, e);
-  };
+    // Usar callback prop si está disponible, sino fallback a window global
+    if (onEdgeDragStart) {
+      onEdgeDragStart(id, e);
+    } else if (window.startEdgeDrag) {
+      window.startEdgeDrag(id, e);
+    }
+  }, [id, onEdgeDragStart]);
 
-  // Nuevo: función para iniciar el drag desde la flecha
-  const handleArrowMouseDown = (e) => {
+  const handleArrowMouseDown = useCallback((e) => {
     e.stopPropagation();
     e.preventDefault();
 
-    if (window.startEdgeDrag) window.startEdgeDrag(id, e);
-  };
+    if (onEdgeDragStart) {
+      onEdgeDragStart(id, e);
+    } else if (window.startEdgeDrag) {
+      window.startEdgeDrag(id, e);
+    }
+  }, [id, onEdgeDragStart]);
 
-  // Renderizar atributo con formato UML estándar
-  const renderAtributo = (a, i) => {
+  // Renderizar atributo con formato UML estándar (memoizada)
+  const renderAtributo = useCallback((a, i) => {
     if (typeof a === 'string') {
       return (
         <div key={i} className="flex items-start py-0.5">
@@ -67,10 +123,10 @@ const ClaseNodeRF = ({ id, data, selected }) => {
         </span>
       </div>
     );
-  };
+  }, [obtenerSimboloVisibilidad]);
 
-  // Renderizar método con formato UML estándar
-  const renderMetodo = (m, i) => {
+  // Renderizar método con formato UML estándar (memoizada)
+  const renderMetodo = useCallback((m, i) => {
     if (typeof m === 'string') {
       return (
         <div key={i} className="flex items-start py-0.5">
@@ -91,106 +147,32 @@ const ClaseNodeRF = ({ id, data, selected }) => {
         </span>
       </div>
     );
-  };
+  }, [obtenerSimboloVisibilidad]);
 
-   const handleStyle = {width: 10, height: 10, background: '#22c55e', border: '2px solid #fff', borderRadius: '50%' };
+  // Configuración de handles
+  const handleOffsets = [15, 35, 65, 85];
 
   return (
     <div
-      id={id} // 👈 necesario para drag & drop
+      id={id}
       data-id={id}
       className={`
-      bg-white border border-gray-300 rounded-sm shadow-sm
-      font-['Segoe_UI','Helvetica','Arial','sans-serif'] 
-      min-w-[180px] max-w-[280px] transition-all duration-150
-      ${selected
+        bg-white border border-gray-300 rounded-sm shadow-sm
+        font-['Segoe_UI','Helvetica','Arial','sans-serif'] 
+        min-w-[180px] max-w-[280px] transition-all duration-150
+        ${selected
           ? 'border-green-500 shadow-md ring-1 ring-green-200'
           : 'hover:border-green-300 hover:shadow'
         }
-    `}
+      `}
       style={{ position: 'relative', cursor: 'crosshair' }}
       onMouseDown={handleMouseDown}
     >
-
-
-      {/* Handles de conexión */}
-      {/* Handles de conexión */}
-      {/* TOP - ids namespaced por nodo y por tipo (src/tgt) */}
-      <Handle
-        type="source"
-        id={`${id}-top-src-1`}
-        position={Position.Top}
-        style={{ left: '15%', ...handleStyle }}
-        onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-top-src-1`, id); }}
-      />
-      <Handle
-        type="source"
-        id={`${id}-top-src-2`}
-        position={Position.Top}
-        style={{ left: '35%', ...handleStyle }}
-        onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-top-src-2`, id); }}
-      />
-      <Handle
-        type="source"
-        id={`${id}-top-src-3`}
-        position={Position.Top}
-        style={{ left: '65%', ...handleStyle }}
-        onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-top-src-3`, id); }}
-      />
-      <Handle
-        type="source"
-        id={`${id}-top-src-4`}
-        position={Position.Top}
-        style={{ left: '85%', ...handleStyle }}
-        onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-top-src-4`, id); }}
-      />
-      <Handle type="target" id={`${id}-top-tgt-1`} position={Position.Top} style={{ left: '15%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-top-tgt-1`, id); }} />
-      <Handle type="target" id={`${id}-top-tgt-2`} position={Position.Top} style={{ left: '35%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-top-tgt-2`, id); }} />
-      <Handle type="target" id={`${id}-top-tgt-3`} position={Position.Top} style={{ left: '65%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-top-tgt-3`, id); }} />
-      <Handle type="target" id={`${id}-top-tgt-4`} position={Position.Top} style={{ left: '85%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-top-tgt-4`, id); }} />
-
-      {/* RIGHT */} 
-      <Handle type="source" id={`${id}-right-src-1`} position={Position.Right} style={{ top: '15%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-right-src-1`, id); }} />
-      <Handle type="source" id={`${id}-right-src-2`} position={Position.Right} style={{ top: '35%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-right-src-2`, id); }} />
-      <Handle type="source" id={`${id}-right-src-3`} position={Position.Right} style={{ top: '65%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-right-src-3`, id); }} />
-      <Handle type="source" id={`${id}-right-src-4`} position={Position.Right} style={{ top: '85%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-right-src-4`, id); }} />
-      <Handle type="target" id={`${id}-right-tgt-1`} position={Position.Right} style={{ top: '15%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-right-tgt-1`, id); }} />
-      <Handle type="target" id={`${id}-right-tgt-2`} position={Position.Right} style={{ top: '35%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-right-tgt-2`, id); }} />
-      <Handle type="target" id={`${id}-right-tgt-3`} position={Position.Right} style={{ top: '65%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-right-tgt-3`, id); }} />
-      <Handle type="target" id={`${id}-right-tgt-4`} position={Position.Right} style={{ top: '85%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-right-tgt-4`, id); }} />
-
-      {/* BOTTOM */} 
-      <Handle type="source" id={`${id}-bottom-src-1`} position={Position.Bottom} style={{ left: '15%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-bottom-src-1`, id); }} />
-      <Handle type="source" id={`${id}-bottom-src-2`} position={Position.Bottom} style={{ left: '35%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-bottom-src-2`, id); }} />
-      <Handle type="source" id={`${id}-bottom-src-3`} position={Position.Bottom} style={{ left: '65%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-bottom-src-3`, id); }} />
-      <Handle type="source" id={`${id}-bottom-src-4`} position={Position.Bottom} style={{ left: '85%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-bottom-src-4`, id); }} />
-      <Handle type="target" id={`${id}-bottom-tgt-1`} position={Position.Bottom} style={{ left: '15%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-bottom-tgt-1`, id); }} />
-      <Handle type="target" id={`${id}-bottom-tgt-2`} position={Position.Bottom} style={{ left: '35%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-bottom-tgt-2`, id); }} />
-      <Handle type="target" id={`${id}-bottom-tgt-3`} position={Position.Bottom} style={{ left: '65%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-bottom-tgt-3`, id); }} />
-      <Handle type="target" id={`${id}-bottom-tgt-4`} position={Position.Bottom} style={{ left: '85%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-bottom-tgt-4`, id); }} />
-
-      {/* LEFT */}
-      <Handle type="source" id={`${id}-left-src-1`} position={Position.Left} style={{ top: '15%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-left-src-1`, id); }} />
-      <Handle type="source" id={`${id}-left-src-2`} position={Position.Left} style={{ top: '35%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-left-src-2`, id); }} />
-      <Handle type="source" id={`${id}-left-src-3`} position={Position.Left} style={{ top: '65%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-left-src-3`, id); }} />
-      <Handle type="source" id={`${id}-left-src-4`} position={Position.Left} style={{ top: '85%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-left-src-4`, id); }} />
-      <Handle type="target" id={`${id}-left-tgt-1`} position={Position.Left} style={{ top: '15%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-left-tgt-1`, id); }} />
-      <Handle type="target" id={`${id}-left-tgt-2`} position={Position.Left} style={{ top: '35%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-left-tgt-2`, id); }} />
-      <Handle type="target" id={`${id}-left-tgt-3`} position={Position.Left} style={{ top: '65%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-left-tgt-3`, id); }} />
-      <Handle type="target" id={`${id}-left-tgt-4`} position={Position.Left} style={{ top: '85%', ...handleStyle }} onClick={() => { if (window.assignSelectedEdge) window.assignSelectedEdge(`${id}-left-tgt-4`, id); }} />
-
-
-     
-
-
-
-      { /*
-      <Handle type="target" id="top" position={Position.Top} className="w-3 h-3 bg-green-600 border-2 border-white" />
-      <Handle type="source" id="bottom" position={Position.Bottom} className="w-3 h-3 bg-green-600 border-2 border-white" />
-      <Handle type="target" id="left" position={Position.Left} className="w-3 h-3 bg-green-600 border-2 border-white" />
-      <Handle type="source" id="right" position={Position.Right} className="w-3 h-3 bg-green-600 border-2 border-white" />
-        */}
-
+      {/* Handles de conexión - Versión refactorizada */}
+      <HandleGroup position={Position.Top} idBase={`${id}-top`} offsets={handleOffsets} />
+      <HandleGroup position={Position.Right} idBase={`${id}-right`} offsets={handleOffsets} />
+      <HandleGroup position={Position.Bottom} idBase={`${id}-bottom`} offsets={handleOffsets} />
+      <HandleGroup position={Position.Left} idBase={`${id}-left`} offsets={handleOffsets} />
 
       {/* Compartimento del nombre */}
       <div className="bg-green-700 text-white px-3 py-2 border-b border-green-800">
@@ -210,18 +192,16 @@ const ClaseNodeRF = ({ id, data, selected }) => {
       </div>
 
       {/* Compartimento de atributos */}
-      <div className="px-3 py-2 border-b border-gray-200 bg-white">
-        <div className="mb-1">
-          <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">Atributos</div>
+      {atributos.length > 0 && (
+        <div className="px-3 py-2 border-b border-gray-200 bg-white">
+          <div className="mb-1">
+            <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">Atributos</div>
+          </div>
+          <div className="space-y-1">
+            {atributos.map(renderAtributo)}
+          </div>
         </div>
-        <div className="space-y-1">
-          {atributos.length > 0 ? (
-            atributos.map(renderAtributo)
-          ) : (
-            <div className="text-gray-400 text-xs italic py-1">— sin atributos —</div>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Compartimento de métodos */}
       <div className="px-3 py-2 bg-white">
@@ -245,4 +225,5 @@ const ClaseNodeRF = ({ id, data, selected }) => {
   );
 };
 
-export default ClaseNodeRF;
+// Versión memoizada para optimización de rendimiento
+export default React.memo(ClaseNodeRF);
