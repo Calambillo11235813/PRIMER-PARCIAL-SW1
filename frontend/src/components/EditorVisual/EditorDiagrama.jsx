@@ -7,7 +7,11 @@ import EditarClaseModal from './EditarClaseModal';
 import { crearDiagrama, actualizarDiagrama } from '../../services/diagramService';
 import ContextMenu from './ContextMenu';
 import EditarRelacionModal from './EditarRelacionModal';
-
+// Intentar resolver export del paquete @tisoap/react-flow-smart-edge de forma robusta
+import * as SmartEdgeModule from '@tisoap/react-flow-smart-edge';
+// Puede exportar named SmartEdge, default o ser un objeto; elegir lo disponible.
+const SmartEdgeResolved = SmartEdgeModule?.SmartEdge || SmartEdgeModule?.default || SmartEdgeModule;
+console.debug && console.debug('[EditorDiagrama] SmartEdgeModule keys:', Object.keys(SmartEdgeModule || {}), 'resolved:', SmartEdgeResolved);
 
 
 // Hook personalizado para manejar el historial
@@ -60,17 +64,27 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
   const [modalAbierto, setModalAbierto] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Ref del wrapper del canvas y referencia a reactFlowInstance
   const reactFlowWrapper = useRef(null);
-  const [reactFlowInstance, setReactFlowInstance] = useState(null);
-  const lastDropRef = useRef(0);
+  const reactFlowInstanceRef = useRef(null);
 
-  //Estados para edicion de relaciones
+  const onReactFlowInit = (instance) => {
+    reactFlowInstanceRef.current = instance;
+    // Exponer globalmente para que los edges puedan proyectar coordenadas
+    window.reactFlowInstance = instance;
+    window.getReactFlowWrapperRect = () => {
+      return reactFlowWrapper.current ? reactFlowWrapper.current.getBoundingClientRect() : { left: 0, top: 0 };
+    };
+    console.debug && console.debug('[EditorDiagrama] onInit reactFlow instance set');
+  };
+
+  // Estados para el manejo de relaciones
   const [relacionEditando, setRelacionEditando] = useState(null);
   const [modalRelacionAbierto, setModalRelacionAbierto] = useState(false);
 
   // Función para editar relación (AGREGA ESTA FUNCIÓN)
   const handleEditarRelacion = (relacion) => {
-    console.log('DEBUG: Editando relación:', relacion);
+
     setRelacionEditando(relacion);
     setModalRelacionAbierto(true);
   };
@@ -103,6 +117,24 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
   // Context menu state
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, node: null, edge: null });
 
+  // Ref sincronizado para inspección inmediata (debug)
+  const contextMenuRef = useRef(contextMenu);
+  useEffect(() => {
+    contextMenuRef.current = contextMenu;
+  }, [contextMenu]);
+
+
+
+  // DEBUG: log del estado del context menu para verificar payloads
+  useEffect(() => {
+    try {
+      // Copia segura para evitar circular refs en el log
+      console.debug('[EditorDiagrama] contextMenu changed:', JSON.parse(JSON.stringify(contextMenu)));
+    } catch (err) {
+      console.debug('[EditorDiagrama] contextMenu changed (non-serializable):', contextMenu);
+    }
+  }, [contextMenu]);
+
   // Usar el hook personalizado para historial
   const { past, future, saveState, undo: historyUndo, redo: historyRedo, canUndo, canRedo } = useDiagramHistory();
 
@@ -113,7 +145,7 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
 
   // Carga inicial
   useEffect(() => {
-    console.log('DEBUG: useEffect ejecutado. estructuraInicial:', estructuraInicial);
+
 
     if (estructuraInicial?.clases) {
       const initialNodes = estructuraInicial.clases.map((clase, idx) => ({
@@ -123,9 +155,7 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
         data: { ...clase, label: clase.nombre || `Clase ${idx + 1}` }
       }));
       setNodes(initialNodes);
-      console.log('DEBUG: Nodos iniciales cargados desde estructuraInicial. Total:', initialNodes.length);
     } else {
-      console.warn('No hay estructura inicial; editor vacío.');
       setNodes([]);
     }
 
@@ -158,11 +188,30 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     }
   }, [nodes, edges]);
 
+  // Detectar si SmartEdgeResolved es un componente React válido
+  const isSmartEdgeComponent = useMemo(() => {
+    if (!SmartEdgeResolved) return false;
+    // función o clase o elemento con render o $$typeof simboliza componente React
+    return typeof SmartEdgeResolved === 'function' || !!SmartEdgeResolved?.$$typeof || !!SmartEdgeResolved?.render;
+  }, []);
+
+  // Nombre del tipo a usar para nuevas conexiones (si no hay SmartEdge disponible, caemos a 'relacionNode')
+  const smartTypeName = useMemo(() => (isSmartEdgeComponent ? 'smart' : 'relacionNode'), [isSmartEdgeComponent]);
+
+  // edgeTypes: si SmartEdgeResolved no es un componente, asignamos RelacionNode al key 'smart' (fallback seguro)
+  const edgeTypes = useMemo(() => ({
+    [smartTypeName]: isSmartEdgeComponent ? SmartEdgeResolved : RelacionNode,
+    relacionNode: RelacionNode
+  }), [smartTypeName, isSmartEdgeComponent]);
+
+  // Connection line type: usar 'smart' solo si hay componente smart disponible; sino usar 'straight'
+  const connectionLineTypeProp = isSmartEdgeComponent ? 'smart' : 'straight';
+
   const onConnect = useCallback((params) => {
     // Guardar estado antes del cambio
     saveState(nodes, edges);
 
-    //Validar que no sea una conexion consigo mismo 
+    // Validar que no sea una conexion consigo mismo 
     if (params.source === params.target) {
       setToast({ type: 'error', message: 'No se puede conectar un nodo consigo mismo.' });
       return;
@@ -170,17 +219,16 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     const nuevaRelacion = {
       ...params,
       id: `edge-${params.source}-${params.target}-${Date.now()}`,
-      type: 'relacionNode',
+      type: smartTypeName, // usa 'smart' o 'relacionNode' según disponibilidad
       data: {
         tipo: 'asociacion', //tipo por defecto 
         multiplicidadSource: '1',
         multiplicidadTarget: 'N',
-
       },
     };
     console.log('DEBUG: Creando nueva relación:', nuevaRelacion);
     setEdges((eds) => addEdge(nuevaRelacion, eds));
-  }, [nodes, edges, saveState]);
+  }, [nodes, edges, saveState, smartTypeName]);
 
   // Drag handlers para canvas
   const handleDragOver = (event) => {
@@ -256,7 +304,7 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     event.stopPropagation();
     const bounds = reactFlowWrapper.current ? reactFlowWrapper.current.getBoundingClientRect() : { left: 0, top: 0 };
 
-    
+
 
     //usar coordenadas absolutas de la ventana
     setContextMenu({
@@ -287,7 +335,14 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
       edge,
     });
   };
-
+  // DEBUG adicional: registrar inmediatamente (uso de ref sincronizada)
+  setTimeout(() => {
+    try {
+      console.debug('[EditorDiagrama] after setContextMenu, contextMenuRef:', JSON.parse(JSON.stringify(contextMenuRef.current)));
+    } catch (err) {
+      console.debug('[EditorDiagrama] after setContextMenu, contextMenuRef (non-serializable):', contextMenuRef.current);
+    }
+  }, 50);
 
 
 
@@ -323,7 +378,7 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
 
   const eliminarRelacion = (relacionId) => {
     console.log('DEBUG: eliminarRelacion llamada para relación ID:', relacionId);
-    console.log('DEBUG: Edges antes de eliminar:', edges);
+    console.log('DEBUG: Edges actuales:', edges);
 
     saveState(nodes, edges);
 
@@ -333,6 +388,48 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     setEdges(nuevasEdges);
     setContextMenu({ visible: false, x: 0, y: 0, node: null, edge: null });
   };
+
+  // util: calcular puntos ortogonales simples entre dos extremos
+  const calcularOrtogonal = (sx, sy, tx, ty) => {
+    const midX = Math.round((sx + tx) / 2);
+    return [
+      { x: Math.round(sx), y: Math.round(sy) },
+      { x: midX, y: Math.round(sy) },
+      { x: midX, y: Math.round(ty) },
+      { x: Math.round(tx), y: Math.round(ty) }
+    ];
+  };
+
+  // NUEVO (REEMPLAZA): cambiar estilo/layout de relación ('straight' | 'orthogonal')
+  const cambiarEstiloRelacion = (relacionId, layout) => {
+    // Guardar estado en historial
+    saveState(nodes, edges);
+
+    setEdges((currentEdges) =>
+      currentEdges.map((e) => {
+        if (e.id !== relacionId) return e;
+        // Solo actualizar el layout en data; no calcular ni escribir puntos aquí.
+        // RelacionNode se encargará de calcular la polyline según sourceX/targetX
+        const newData = { ...e.data, layout };
+        // Si pasamos a lineal, borrar puntos guardados (si los hubiera) para evitar confusiones
+        if (layout === 'straight' && newData.points) {
+          const nd = { ...newData };
+          delete nd.points;
+          return { ...e, data: nd };
+        }
+        return { ...e, data: newData };
+      })
+    );
+
+    // Cerrar menú contextual
+    setContextMenu({ visible: false, x: 0, y: 0, node: null, edge: null });
+
+    console.debug && console.debug(`[EditorDiagrama] estilo de relación ${relacionId} -> ${layout}`);
+  };
+
+
+
+
 
   const closeContextMenu = () => {
     setContextMenu({ visible: false, x: 0, y: 0, node: null, edge: null });
@@ -473,10 +570,6 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     claseNode: ClaseNodeRF
   }), []);
 
-  const edgeTypes = useMemo(() => ({
-    relacionNode: RelacionNode
-  }), []);
-
 
   // Handlers de cambio que registran en el historial
   const handleNodesChange = useCallback((changes) => {
@@ -487,127 +580,93 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
     onEdgesChange(changes);
   }, [onEdgesChange]);
 
-  
-
-  
+  // Escuchar cambios de puntos de edge emitidos por RelacionNode
+  useEffect(() => {
+    const handler = (ev) => {
+      try {
+        const detail = ev.detail || {};
+        // aceptar tanto { id, points } como { edgeId, points }
+        const edgeId = detail.id || detail.edgeId;
+        const points = detail.points;
+        if (!edgeId || !points) return;
+        console.debug('[EditorDiagrama] received edge-points-change for', edgeId, points);
+        setEdges((current) => current.map((e) => e.id === edgeId ? { ...e, data: { ...e.data, points } } : e));
+      } catch (err) {
+        console.warn('Error handling edge-points-change:', err);
+      }
+    };
+    window.addEventListener('edge-points-change', handler);
+    return () => window.removeEventListener('edge-points-change', handler);
+  }, [setEdges]);
 
   return (
-    <div className="editor-canvas-wrapper" style={{ height: '100%' }}>
-      <div
-        ref={reactFlowWrapper}
-        className="editor-fullscreen reactflow-wrapper"
-        style={{ flex: 1, minHeight: 420 }}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
+    <div className="editor-canvas-wrapper" style={{ height: '100%' }} ref={reactFlowWrapper}>
+      <ReactFlow
+        nodes={nodes} // SIN elementos temporales
+        edges={edges} // SIN elementos temporale
+        onNodesChange={handleNodesChange}
+        onEdgesChange={handleEdgesChange}
+        onConnect={onConnect}
+        connectable={true}
+
+
+
+        nodeTypes={nodeTypes}
+
+        onEdgeUpdate={(oldEdge, newConnection) => {
+          setEdges((eds) => eds.map(e => e.id === oldEdge.id ? { ...e, ...newConnection } : e));
+        }}
+        edgeTypes={edgeTypes}
+        onNodeClick={handleNodeClick}
+        onNodeDoubleClick={handleNodeDoubleClick}
+
+        // 👇 Aquí capturas el clic derecho en un nodo
+
+        onNodeContextMenu={(event, node) => {
+          handleNodeContextMenu(event, node);
+        }}
+        // 👇 Aquí capturas el clic derecho en una relación (edge)
+        onEdgeContextMenu={(event, edge) => {
+          handleEdgeContextMenu(event, edge);
+        }}
+        fitView
+        onInit={onReactFlowInit}
+        connectionLineType={connectionLineTypeProp}
+        connectionRadius={20}
       >
-        {/* Controles: Guardar + Undo/Redo + toast */}
-        <div style={{
-          position: 'fixed',
-          right: 20,
-          top: 'calc(var(--header-height) + 12px)',
-          zIndex: 999,
-          display: 'flex',
-          gap: 10,
-          alignItems: 'center',
-        }}>
-          <button
-            onClick={handleGuardarDiagrama}
-            className="bg-green-600 hover:bg-green-700 text-white text-lg px-5 py-2 rounded-md shadow-md fixed-control-btn"
-            title="Guardar diagrama"
-            disabled={isSaving}
-            style={{ minWidth: 120, height: 44 }}
-          >
-            {isSaving ? 'Guardando...' : 'Guardar'}
-          </button>
+        <Controls />
+        <Background gap={16} />
+      </ReactFlow>
 
-          <button
-            onClick={handleUndo}
-            className={`bg-white border px-3 py-2 rounded ${canUndo ? 'hover:bg-gray-100 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
-            title="Deshacer"
-            disabled={!canUndo}
-            style={{ height: 44 }}
-          >
-            ↶
-          </button>
-          <button
-            onClick={handleRedo}
-            className={`bg-white border px-3 py-2 rounded ${canRedo ? 'hover:bg-gray-100 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
-            title="Rehacer"
-            disabled={!canRedo}
-            style={{ height: 44 }}
-          >
-            ↷
-          </button>
+      {/* Renderizar el menú contextual */}
+      <ContextMenu
+        visible={contextMenu.visible}
+        x={contextMenu.x}
+        y={contextMenu.y}
+        node={contextMenu.node}
+        edge={contextMenu.edge}
+        onEditarNodo={(node) => {
+          setClaseEditando(node);
+          setModalAbierto(true);
+        }}
+        onEditarRelacion={handleEditarRelacion}
+        onCopiarNodo={copiarNodo}
+        onEliminarNodo={eliminarNodoMenu}
+        onEliminarRelacion={eliminarRelacion}
+        onClose={closeContextMenu}
+        onCambiarEstiloRelacion={cambiarEstiloRelacion}
+      />
+
+      {/* Toast notifications */}
+      {toast && (
+        <div
+          className={`fixed top-20 right-4 px-4 py-2 rounded-md shadow-lg z-50 ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+            }`}
+          style={{ animation: 'fadeIn 0.3s ease-in-out' }}
+        >
+          {toast.message}
         </div>
-
-        {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-green-600 text-lg">Cargando editor...</div>
-          </div>
-        ) : (
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={handleNodesChange}
-            onEdgesChange={handleEdgesChange}
-            onConnect={onConnect}
-
-
-
-
-            nodeTypes={nodeTypes}
-            edgeTypes={edgeTypes}
-            onNodeClick={handleNodeClick}
-            onNodeDoubleClick={handleNodeDoubleClick}
-
-            // 👇 Aquí capturas el clic derecho en un nodo
-
-            onNodeContextMenu={(event, node) => {
-              handleNodeContextMenu(event, node);
-             }}
-             // 👇 Aquí capturas el clic derecho en una relación (edge)
-            onEdgeContextMenu={(event, edge) => {
-              handleEdgeContextMenu(event, edge);
-            }}
-            fitView
-            onInit={(instance) => setReactFlowInstance(instance)}
-            connectionLineType="smoothstep"
-            connectionRadius={20}
-          >
-            <Controls />
-            <Background gap={16} />
-          </ReactFlow>
-        )}
-
-        {/* Renderizar el menú contextual */}
-        <ContextMenu
-          visible={contextMenu.visible}
-          x={contextMenu.x}
-          y={contextMenu.y}
-          node={contextMenu.node}
-          edge={contextMenu.edge}
-          onEditarNodo={(node) => {
-            setClaseEditando(node);
-            setModalAbierto(true);
-          }}
-          onEditarRelacion={handleEditarRelacion}
-          onCopiarNodo={copiarNodo}
-          onEliminarNodo={eliminarNodoMenu}
-          onEliminarRelacion={eliminarRelacion}
-          onClose={closeContextMenu}
-        />
-
-        {/* Toast notifications */}
-        {toast && (
-          <div
-            className={`fixed top-20 right-4 px-4 py-2 rounded-md shadow-lg z-50 ${toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-              }`}
-            style={{ animation: 'fadeIn 0.3s ease-in-out' }}
-          >
-            {toast.message}
-          </div>
-        )}
-      </div>
+      )}
 
       {modalAbierto && (
         <EditarClaseModal
@@ -624,7 +683,6 @@ const EditorDiagrama = ({ estructuraInicial, onGuardar, projectId = null, diagra
           onCancelar={() => setModalRelacionAbierto(false)}
         />
       )}
-
     </div>
   );
 };

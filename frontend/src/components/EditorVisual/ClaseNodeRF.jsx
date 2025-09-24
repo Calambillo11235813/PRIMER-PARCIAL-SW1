@@ -5,7 +5,7 @@ import { Handle, Position } from '@xyflow/react';
  * Nodo de clase estilo Enterprise Architect UML 2.5 (3 compartimentos).
  * data: { nombre, estereotipo, atributos: [{vis, nombre, tipo, mult}], metodos: [{vis, nombre, firma}], color? }
  */
-const ClaseNodeRF = ({ data, selected }) => {
+const ClaseNodeRF = ({ id, data, selected }) => {
   const nombre = data?.nombre || 'Clase';
   const estereotipo = data?.estereotipo;
   const atributos = data?.atributos || [];
@@ -14,13 +14,34 @@ const ClaseNodeRF = ({ data, selected }) => {
 
   // Función para obtener el símbolo de visibilidad UML
   const obtenerSimboloVisibilidad = (vis) => {
-    switch(vis) {
+    switch (vis) {
       case 'public': return '+';
       case 'private': return '-';
       case 'protected': return '#';
       case 'package': return '~';
       default: return vis || '+';
     }
+  };
+
+  // Nuevo: función para iniciar el drag
+  const handleMouseDown = (e) => {
+    //si el evento viene de la flecha no hagas nada 
+    if (e.target.id == `arrow-${id}`) {
+
+      return;
+    }
+    e.stopPropagation();
+
+    // Llama a una función global/contexto para iniciar la conexión
+    if (window.startEdgeDrag) window.startEdgeDrag(id, e);
+  };
+
+  // Nuevo: función para iniciar el drag desde la flecha
+  const handleArrowMouseDown = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    if (window.startEdgeDrag) window.startEdgeDrag(id, e);
   };
 
   // Renderizar atributo con formato UML estándar
@@ -33,7 +54,7 @@ const ClaseNodeRF = ({ data, selected }) => {
         </div>
       );
     }
-    
+
     return (
       <div key={i} className="flex items-start py-0.5">
         <span className="text-gray-500 font-mono text-xs mr-1 w-3 flex-shrink-0">
@@ -58,7 +79,7 @@ const ClaseNodeRF = ({ data, selected }) => {
         </div>
       );
     }
-    
+
     return (
       <div key={i} className="flex items-start py-0.5">
         <span className="text-gray-500 font-mono text-xs mr-1 w-3 flex-shrink-0">
@@ -72,21 +93,84 @@ const ClaseNodeRF = ({ data, selected }) => {
     );
   };
 
+   const handleStyle = {width: 10, height: 10, background: '#22c55e', border: '2px solid #fff', borderRadius: '50%' };
+
   return (
-    <div className={`
+    <div
+      id={id} // 👈 necesario para drag & drop
+      data-id={id}
+      className={`
       bg-white border border-gray-300 rounded-sm shadow-sm
       font-['Segoe_UI','Helvetica','Arial','sans-serif'] 
       min-w-[180px] max-w-[280px] transition-all duration-150
-      ${selected 
-        ? 'border-green-500 shadow-md ring-1 ring-green-200' 
-        : 'hover:border-green-300 hover:shadow'
-      }
-    `}>
+      ${selected
+          ? 'border-green-500 shadow-md ring-1 ring-green-200'
+          : 'hover:border-green-300 hover:shadow'
+        }
+    `}
+      style={{ position: 'relative', cursor: 'crosshair' }}
+      onMouseDown={handleMouseDown}
+    >
+
+
       {/* Handles de conexión */}
+      {/* Handles de conexión */}
+      {/* TOP */}
+      <Handle type="source" id="top-1" position={Position.Top} style={{ left: '15%', ...handleStyle }} />
+      <Handle type="source" id="top-2" position={Position.Top} style={{ left: '35%', ...handleStyle }} />
+      <Handle type="source" id="top-3" position={Position.Top} style={{ left: '65%', ...handleStyle }} />
+      <Handle type="source" id="top-4" position={Position.Top} style={{ left: '85%', ...handleStyle }} />
+
+      <Handle type="target" id="top-1" position={Position.Top} style={{ left: '15%', ...handleStyle }} />
+      <Handle type="target" id="top-2" position={Position.Top} style={{ left: '35%', ...handleStyle }} />
+      <Handle type="target" id="top-3" position={Position.Top} style={{ left: '65%', ...handleStyle }} />
+      <Handle type="target" id="top-4" position={Position.Top} style={{ left: '85%', ...handleStyle }} />
+
+      {/* RIGHT */}
+      <Handle type="source" id="right-1" position={Position.Right} style={{ top: '15%', ...handleStyle }} />
+      <Handle type="source" id="right-2" position={Position.Right} style={{ top: '35%', ...handleStyle }} />
+      <Handle type="source" id="right-3" position={Position.Right} style={{ top: '65%', ...handleStyle }} />
+      <Handle type="source" id="right-4" position={Position.Right} style={{ top: '85%', ...handleStyle }} />
+
+      <Handle type="target" id="right-1" position={Position.Right} style={{ top: '15%', ...handleStyle }} />
+      <Handle type="target" id="right-2" position={Position.Right} style={{ top: '35%', ...handleStyle }} />
+      <Handle type="target" id="right-3" position={Position.Right} style={{ top: '65%', ...handleStyle }} />
+      <Handle type="target" id="right-4" position={Position.Right} style={{ top: '85%', ...handleStyle }} />
+
+      {/* BOTTOM */}
+      <Handle type="source" id="bottom-1" position={Position.Bottom} style={{ left: '15%', ...handleStyle }} />
+      <Handle type="source" id="bottom-2" position={Position.Bottom} style={{ left: '35%', ...handleStyle }} />
+      <Handle type="source" id="bottom-3" position={Position.Bottom} style={{ left: '65%', ...handleStyle }} />
+      <Handle type="source" id="bottom-4" position={Position.Bottom} style={{ left: '85%', ...handleStyle }} />
+
+      <Handle type="target" id="bottom-1" position={Position.Bottom} style={{ left: '15%', ...handleStyle }} />
+      <Handle type="target" id="bottom-2" position={Position.Bottom} style={{ left: '35%', ...handleStyle }} />
+      <Handle type="target" id="bottom-3" position={Position.Bottom} style={{ left: '65%', ...handleStyle }} />
+      <Handle type="target" id="bottom-4" position={Position.Bottom} style={{ left: '85%', ...handleStyle }} />
+
+      {/* LEFT */}
+      <Handle type="source" id="left-1" position={Position.Left} style={{ top: '15%', ...handleStyle }} />
+      <Handle type="source" id="left-2" position={Position.Left} style={{ top: '35%', ...handleStyle }} />
+      <Handle type="source" id="left-3" position={Position.Left} style={{ top: '65%', ...handleStyle }} />
+      <Handle type="source" id="left-4" position={Position.Left} style={{ top: '85%', ...handleStyle }} />
+
+      <Handle type="target" id="left-1" position={Position.Left} style={{ top: '15%', ...handleStyle }} />
+      <Handle type="target" id="left-2" position={Position.Left} style={{ top: '35%', ...handleStyle }} />
+      <Handle type="target" id="left-3" position={Position.Left} style={{ top: '65%', ...handleStyle }} />
+      <Handle type="target" id="left-4" position={Position.Left} style={{ top: '85%', ...handleStyle }} />
+
+
+     
+
+
+
+      { /*
       <Handle type="target" id="top" position={Position.Top} className="w-3 h-3 bg-green-600 border-2 border-white" />
       <Handle type="source" id="bottom" position={Position.Bottom} className="w-3 h-3 bg-green-600 border-2 border-white" />
       <Handle type="target" id="left" position={Position.Left} className="w-3 h-3 bg-green-600 border-2 border-white" />
       <Handle type="source" id="right" position={Position.Right} className="w-3 h-3 bg-green-600 border-2 border-white" />
+        */}
+
 
       {/* Compartimento del nombre */}
       <div className="bg-green-700 text-white px-3 py-2 border-b border-green-800">

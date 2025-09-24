@@ -15,11 +15,11 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
-
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# cargar .env desde BASE_DIR
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 
 # Quick-start development settings - unsuitable for production
@@ -108,11 +108,14 @@ CHANNEL_LAYERS = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB'),
-        'USER': os.getenv('POSTGRES_USER'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
-        'HOST': os.getenv('POSTGRES_HOST'),
-        'PORT': os.getenv('POSTGRES_PORT'),
+        # soporta nombres provenientes de docker-compose (POSTGRES_*) o de tu .env actual (DB_*)
+        'NAME': os.getenv('POSTGRES_DB') or os.getenv('DB_NAME') or 'uml_db',
+        'USER': os.getenv('POSTGRES_USER') or os.getenv('DB_USER') or 'uml_user',
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD') or os.getenv('DB_PASSWORD') or 'uml_password',
+        # Si ejecutas Django dentro de Docker: usar hostname 'postgres' y puerto 5432.
+        # Si ejecutas Django en Windows fuera de Docker: usar 'localhost' y el puerto mapeado (5433).
+        'HOST': os.getenv('POSTGRES_HOST') or os.getenv('DB_HOST') or 'localhost',
+        'PORT': os.getenv('POSTGRES_PORT') or os.getenv('DB_PORT') or '5433',
     }
 }
 
@@ -174,7 +177,6 @@ LOGOUT_REDIRECT_URL = '/'
 # permitir envío de cookies en CORS (necesario para sesión basada en cookies)
 CORS_ALLOW_CREDENTIALS = True
 
-# Asegúrate de que el origen frontend esté en CORS_ALLOWED_ORIGINS y CSRF_TRUSTED_ORIGINS
 CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173').split(',')
 
 # Configura JWT como autenticación por defecto
@@ -187,6 +189,7 @@ REST_FRAMEWORK = {
     ],
 }
 
+# Si tu clase se llama UsuarioPersonalizado en app 'usuario':
 AUTH_USER_MODEL = 'usuario.UsuarioPersonalizado'
 
 # Seguridad adicional para producción

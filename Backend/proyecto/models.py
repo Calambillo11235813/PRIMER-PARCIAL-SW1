@@ -1,10 +1,11 @@
 from django.db import models
-from usuario.models import UsuarioPersonalizado  # Importa el modelo de usuario
+from django.conf import settings
 
 class Proyecto(models.Model):
     nombre = models.CharField(max_length=100)
     descripcion = models.TextField(blank=True)
-    creador = models.ForeignKey(UsuarioPersonalizado, on_delete=models.SET_NULL, null=True, blank=True, related_name='proyectos')  # Hacer opcional
+    # usar la referencia por string/settings para evitar import directo
+    creador = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='proyectos')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
