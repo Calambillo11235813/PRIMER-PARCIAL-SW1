@@ -3,7 +3,7 @@ import { EdgeLabelRenderer } from '@xyflow/react';
 
 // Hooks
 import { usePointsManagement } from './hooks/usePointsManagement';
-import { useDragAndDrop } from './hooks/useDragAndDrop';
+import { useDragAndDrop } from './hooks/useEdgeDrag';
 
 // Components
 import { RelationshipLine } from './components/RelationshipLine';
@@ -25,7 +25,10 @@ const RelacionNode = ({ id, sourceX, sourceY, targetX, targetY, data }) => {
   );
 
   // Drag and drop
-  const dragDrop = useDragAndDrop(id, localPointsRef, updatePoints);
+  const dragEdge = useEdgeDrag(id, localPointsRef, updatePoints);
+
+  const manejarInicioArrastreEndpoint = dragEdge.manejarInicioArrastreEndpoint;
+  const manejarInicioArrastreHandle = dragEdge.manejarInicioArrastreHandle;
 
   // Helper para obtener puntos renderizados
   const getRenderedPoint = useCallback((p, i, len) => {
@@ -50,23 +53,23 @@ const RelacionNode = ({ id, sourceX, sourceY, targetX, targetY, data }) => {
     <>
       <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'auto' }}>
         <RelationshipLine pointsStr={pointsStr} tipoRelacion={tipoRelacion} />
-        
-        <UMLSymbols 
-          localPoints={localPoints} 
-          getRenderedPoint={getRenderedPoint} 
-          tipoRelacion={tipoRelacion} 
+
+        <UMLSymbols
+          localPoints={localPoints}
+          getRenderedPoint={getRenderedPoint}
+          tipoRelacion={tipoRelacion}
         />
-        
-        <MultiplicidadLabels 
-          localPoints={localPoints} 
-          getRenderedPoint={getRenderedPoint} 
-          data={data} 
+
+        <MultiplicidadLabels
+          localPoints={localPoints}
+          getRenderedPoint={getRenderedPoint}
+          data={data}
         />
-        
-        <ConnectionHandles 
-          localPoints={localPoints} 
-          getRenderedPoint={getRenderedPoint} 
-          {...dragDrop} 
+
+        <ConnectionHandles
+          localPoints={localPoints}
+          getRenderedPoint={getRenderedPoint}
+          {...dragDrop}
         />
       </svg>
 
