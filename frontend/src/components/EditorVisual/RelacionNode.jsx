@@ -10,14 +10,15 @@ import { RelationshipLine } from './components/RelationshipLine';
 import { MultiplicidadLabels } from './components/MultiplicidadLabels';
 import { ConnectionHandles } from './components/ConnectionHandles';
 import { UMLSymbols } from './components/UMLSymbols';
-
-// Constants
+import ClaseAsociacionNode from './custom-nodes/ClaseAsociacionNode';
 import { TIPOS_RELACION } from './constants/umlTypes';
+import { LineaClaseAsociacion } from './components/UMLSymbols/LineaClaseAsociacion';
 
 const RelacionNode = ({ id, sourceX, sourceY, targetX, targetY, data }) => {
   const layout = data?.layout || null;
   const tipoRelacion = data?.tipo || TIPOS_RELACION.ASOCIACION;
-  console.log('RelacionNode - tipoRelacion:', tipoRelacion);
+  console.log('[RelacionNode] tipoRelacion:', tipoRelacion);
+
   const initialPoints = data?.points || null;
 
   // Gestión de puntos
@@ -51,11 +52,22 @@ const RelacionNode = ({ id, sourceX, sourceY, targetX, targetY, data }) => {
   if (localPoints.length === 0) return null;
 
   console.log('[RelacionNode] Render:', { id, sourceX, sourceY, targetX, targetY, data });
+  console.log('[RelacionNode] data.claseAsociacion:', data?.claseAsociacion);
 
   return (
     <>
       <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'auto' }}>
-        <RelationshipLine pointsStr={pointsStr} tipoRelacion={tipoRelacion} />
+        {/* Renderiza la línea especial si es association_class */}
+        {tipoRelacion === TIPOS_RELACION.ASSOCIATION_CLASS ? (
+          <LineaClaseAsociacion
+            x1={sourceX}
+            y1={sourceY}
+            x2={targetX}
+            y2={targetY}
+          />
+        ) : (
+          <RelationshipLine pointsStr={pointsStr} tipoRelacion={tipoRelacion} />
+        )}
 
         <UMLSymbols
           localPoints={localPoints}

@@ -4,6 +4,7 @@ import { ReactFlow, Controls, Background } from '@xyflow/react';
 import ClaseNodeRF from '../ClaseNodeRF'; // Debe ser ClaseNodeRF, no ClaseNode
 import RelacionNode from '../RelacionNode';
 import TestNode from '../TestNode'; // Agrega la importación
+import {RelationshipLine} from './RelationshipLine';
 
 /**
  * Componente principal del canvas de React Flow
@@ -30,8 +31,6 @@ const DiagramCanvas = ({
     onEdgesChange 
   } = editorState;
 
-  // Agrega logs para depuración
-  
 
   const {
     reactFlowWrapper,
@@ -74,7 +73,7 @@ const DiagramCanvas = ({
   return (
     <div 
       className="editor-canvas-wrapper" 
-      style={{ height: '100%', background: '#fff' }} // ← Fondo blanco
+      style={{ height: '100%', background: '#fff' }}
       ref={reactFlowWrapper}
     >
       <ReactFlow

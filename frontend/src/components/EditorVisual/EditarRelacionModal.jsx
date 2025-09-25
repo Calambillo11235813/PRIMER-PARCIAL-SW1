@@ -1,16 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import InvertirRelacion from './components/InvertirRelacion';
 import { getHandleValidoInvertido } from './utils/getHandleValido'; // ← Usa la función correcta
-
-// Constantes UML reutilizables
-const TIPOS_RELACION = {
-  ASOCIACION: 'asociacion',
-  COMPOSICION: 'composicion',
-  AGREGACION: 'agregacion',
-  HERENCIA: 'herencia',
-  REALIZACION: 'realizacion',
-  DEPENDENCIA: 'dependencia'
-};
+import { TIPOS_RELACION } from './constants/umlTypes'; // Usa la constante global
 
 const MULTIPLICIDADES = ['1', 'N', '0..1', '1..*', '0..*', '*'];
 
@@ -20,7 +11,8 @@ const TIPOS_RELACION_LABELS = {
   [TIPOS_RELACION.AGREGACION]: 'Agregación ◇ (Todo-Parte débil)',
   [TIPOS_RELACION.HERENCIA]: 'Herencia △ (Generalización)',
   [TIPOS_RELACION.REALIZACION]: 'Realización ⟲ (Interface)',
-  [TIPOS_RELACION.DEPENDENCIA]: 'Dependencia ⤴ (Uso temporal)'
+  [TIPOS_RELACION.DEPENDENCIA]: 'Dependencia ⤴ (Uso temporal)',
+  [TIPOS_RELACION.ASSOCIATION_CLASS]: 'Clase de Asociación ⧉'
 };
 
 // Componente de select reutilizable
@@ -100,6 +92,7 @@ const EditarRelacionModal = ({ relacion, onGuardar, onCancelar, nodos }) => {
   // Inicializar con datos de la relación
   useEffect(() => {
     if (relacion) {
+      console.log('[EditarRelacionModal] Inicializando con relación:', relacion);
       setFormData({
         tipo: relacion.data?.tipo || TIPOS_RELACION.ASOCIACION,
         multiplicidadSource: relacion.data?.multiplicidadSource || '1',
@@ -114,13 +107,29 @@ const EditarRelacionModal = ({ relacion, onGuardar, onCancelar, nodos }) => {
   }, []);
 
   const handleGuardar = useCallback(() => {
-    onGuardar?.({
+    let nuevaRelacion = {
       ...relacion,
       data: {
         ...relacion.data,
         ...formData
       },
-    });
+    };
+
+    // Si el tipo es association_class, agrega la clase intermedia
+    if (formData.tipo === TIPOS_RELACION.ASSOCIATION_CLASS) {
+      // Aquí deberías obtener los datos de la clase intermedia desde el formulario o selección
+      // Ejemplo temporal:
+      nuevaRelacion.data.claseAsociacion = {
+        id: 'claseAsociacion-' + Date.now(),
+        nombre: 'ClaseIntermedia',
+        atributos: [],
+        metodos: []
+      };
+      console.log('[EditarRelacionModal] Asignando clase intermedia:', nuevaRelacion.data.claseAsociacion);
+    }
+
+    console.log('[EditarRelacionModal] Guardando relación:', nuevaRelacion);
+    onGuardar?.(nuevaRelacion);
   }, [relacion, formData, onGuardar]);
 
   // MODIFICADO: Usa getHandleValidoInvertido para asegurar handles válidos

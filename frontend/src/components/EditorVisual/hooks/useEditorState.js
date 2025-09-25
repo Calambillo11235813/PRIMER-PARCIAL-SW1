@@ -72,7 +72,12 @@ export const useEditorState = (estructuraInicial) => {
 
   // Refuerza el filtrado cada vez que se actualicen los edges
   useEffect(() => {
-    setEdges((eds) => eds.filter(e => e.sourceHandle && e.targetHandle));
+    setEdges((eds) =>
+      eds.filter(e =>
+        // Solo filtra si el edge es de tipo relacionNode y no es association_class
+        e.type !== 'relacionNode' || e.data?.tipo !== 'association_class' || (e.sourceHandle && e.targetHandle)
+      )
+    );
   }, [edges, setEdges]);
 
   // Agrega un efecto para depurar cambios en los nodos

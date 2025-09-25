@@ -3,11 +3,13 @@ export { RomboUML } from './RomboUML';
 export { TrianguloUML } from './TrianguloUML';
 export { FlechaSimple } from './FlechaSimple';
 
+
 // Componente principal que agrupa todos los símbolos
 import React from 'react';
 import { RomboUML } from './RomboUML';
 import { TrianguloUML } from './TrianguloUML';
 import { FlechaSimple } from './FlechaSimple';
+export { LineaClaseAsociacion } from './LineaClaseAsociacion';
 
 /**
  * Renderiza el símbolo UML correspondiente según el tipo de relación.
@@ -43,6 +45,15 @@ export const UMLSymbols = ({ localPoints, getRenderedPoint, tipoRelacion }) => {
       return <TrianguloUML x={offsetX} y={offsetY} angle={angle} filled={false} size={10} />;
     case 'dependencia':
       return <FlechaSimple x={offsetX} y={offsetY} angle={angle} size={8} />;
+      case 'association_class':
+    return (
+      <LineaClaseAsociacion
+        x1={sourcePoint.x}
+        y1={sourcePoint.y}
+        x2={targetPoint.x}
+        y2={targetPoint.y}
+      />
+    );
     case 'asociacion':
       return null; // ← Asociación: solo línea simple, sin flecha
     default:

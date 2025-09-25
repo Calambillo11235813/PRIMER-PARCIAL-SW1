@@ -12,6 +12,7 @@ import ToastNotifications from './components/ToastNotifications';
 import DiagramControls from './components/DiagramControls';
 import ClaseNodeRF from './ClaseNodeRF';
 import Toolbar from './Toolbar'; // Asegúrate de importar Toolbar
+import { TIPOS_RELACION } from './constants/umlTypes'; // Asegúrate de importar esto
 
 /**
  * Componente principal del editor de diagramas UML
@@ -137,6 +138,66 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
         relacionEditando={edgeManagement.relacionEditando}
         onGuardarRelacion={(relacionActualizada) => {
           console.log('[EditorDiagrama] Relación actualizada:', relacionActualizada);
+
+          // Si es association_class, agrega el nodo y los edges correspondientes
+          if (
+            relacionActualizada.data?.tipo === TIPOS_RELACION.ASSOCIATION_CLASS &&
+            relacionActualizada.data?.claseAsociacion
+          ) {
+            // 1. Agregar el nodo de clase intermedia si no existe
+            editorState.setNodes((nodosPrevios) => {
+              const existe = nodosPrevios.some(n => n.id === relacionActualizada.data.claseAsociacion.id);
+              if (!existe) {
+                // Calcula posición entre source y target
+                const sourceNode = nodosPrevios.find(n => n.id === relacionActualizada.source);
+                const targetNode = nodosPrevios.find(n => n.id === relacionActualizada.target);
+                const posX = sourceNode && targetNode
+                  ? (sourceNode.position.x + targetNode.position.x) / 2
+                  : 100;
+                const posY = sourceNode && targetNode
+                  ? ((sourceNode.position.y + targetNode.position.y) / 2) + 80 // offset hacia abajo
+                  : 180;
+                return [
+                  ...nodosPrevios,
+                  {
+                    id: relacionActualizada.data.claseAsociacion.id,
+                    type: 'claseNode', // O 'associationClassNode' si tienes un tipo específico
+                    position: { x: posX, y: posY },
+                    data: relacionActualizada.data.claseAsociacion
+                  }
+                ];
+              }
+              return nodosPrevios;
+            });
+
+            // 2. Crear edges desde origen → clase intermedia y clase intermedia → destino
+            editorState.setEdges((edgesPrevios) => {
+              // Elimina el edge original
+              const edgesFiltrados = edgesPrevios.filter(edge => edge.id !== relacionActualizada.id);
+
+              // Crea dos nuevos edges con tipo recto y estilo de association_class
+              const edgeA = {
+                id: `${relacionActualizada.source}-${relacionActualizada.data.claseAsociacion.id}`,
+                source: relacionActualizada.source,
+                target: relacionActualizada.data.claseAsociacion.id,
+                type: 'straight', // ← Línea recta
+                data: { tipo: TIPOS_RELACION.ASSOCIATION_CLASS }
+              };
+              const edgeB = {
+                id: `${relacionActualizada.data.claseAsociacion.id}-${relacionActualizada.target}`,
+                source: relacionActualizada.data.claseAsociacion.id,
+                target: relacionActualizada.target,
+                type: 'straight', // ← Línea recta
+                data: { tipo: TIPOS_RELACION.ASSOCIATION_CLASS }
+              };
+              return [...edgesFiltrados, edgeA, edgeB];
+            });
+
+            edgeManagement.setRelacionEditando(null); // Cierra el modal
+            return; // No actualices el edge original
+          }
+
+          // Si no es association_class, actualiza el edge normalmente
           editorState.setEdges((edgesPrevios) =>
             edgesPrevios.map(edge =>
               edge.id === relacionActualizada.id
