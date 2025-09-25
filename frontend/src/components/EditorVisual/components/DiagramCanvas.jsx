@@ -74,7 +74,7 @@ const DiagramCanvas = ({
   return (
     <div 
       className="editor-canvas-wrapper" 
-      style={{ height: '100%' }} 
+      style={{ height: '100%', background: '#fff' }} // ← Fondo blanco
       ref={reactFlowWrapper}
     >
       <ReactFlow
@@ -101,10 +101,9 @@ const DiagramCanvas = ({
           showInteractive={false}
         />
         <Background 
-          gap={16} 
-          size={1} 
-          color="#f0f0f0"
-          variant="dots"
+          gap={24} 
+          color="#e5e7eb" 
+          variant="lines" // ← Cambia a líneas para cuadrícula
         />
       </ReactFlow>
     </div>

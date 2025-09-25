@@ -30,11 +30,11 @@ const SidebarRelacion = ({ relacion, onDragStart, onDragEnd }) => {
 
   return (
     <div
+      className="flex items-center bg-green-100 border border-green-600 rounded-lg px-3 py-2 mb-3 cursor-grab shadow-sm transition hover:bg-green-200"
       draggable
-      onDragStart={(e) => onDragStart(e, relacion)}
+      onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      title={relacion.hint}
-      className={`flex items-center p-3 rounded-xl cursor-grab border ${relacion.border} ${relacion.bg} hover:shadow-sm transition-all duration-150`}
+      title={relacion.descripcion}
     >
       <div className="flex items-center justify-center rounded-lg bg-gray-50 w-10 h-10 shadow-inner border border-gray-200">
         {renderizarIconoRelacion()}

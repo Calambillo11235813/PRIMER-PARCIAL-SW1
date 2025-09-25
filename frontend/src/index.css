@@ -125,21 +125,16 @@ html, body, #root {
   z-index: 60;
   box-shadow: 0 0 0 rgba(0,0,0,0); /* no alterar sombra si ya la tienes */
   padding: 1rem; /* mantén el padding interno del sidebar que ya usabas */
-  background: inherit; /* conserva el tema */
+  background: #fff; /* ← Fondo blanco puro */
 }
 
 /* Hacer que el área del editor / canvas deje espacio para el sidebar */
 .editor-full-canvas,
 .editor-canvas-wrapper {
-  margin-left: var(--editor-sidebar-width); /* mover canvas a la derecha del sidebar fijo */
-  width: calc(100% - var(--editor-sidebar-width));
   min-height: calc(100vh - var(--header-height));
 }
 
-/* Mantener el espacio para el sidebar (si aplicas wrapper con margin-left) */
 .editor-canvas-wrapper {
-  margin-left: var(--editor-sidebar-width);
-  width: calc(100% - var(--editor-sidebar-width));
 }
 
 /* Botones con sombra ligera para destacarlos sobre el fondo */

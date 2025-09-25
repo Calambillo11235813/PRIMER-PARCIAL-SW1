@@ -7,6 +7,7 @@ import SidebarRelacion from './components/SiderbarRelacion';
 import SidebarSearch from './components/SidebarSearch';
 import SidebarSection from './components/SidebarSection';
 import SidebarColapsado from './components/SidebarColapasado';
+import CustomScrollbar from '../CustomScrollbar';
 
 // Hooks
 import { useSidebarDrag } from './hooks/useSidebarDrag'; // ← Hook específico para Sidebar
@@ -57,8 +58,8 @@ const Sidebar = ({ onBack = null }) => {
   }
 
   return (
-    <aside className="editor-sidebar h-screen overflow-y-auto min-w-80 p-6 bg-green-50">
-      <div className="sidebar-scroll">
+    <aside className="editor-sidebar h-screen min-w-80 p-6 bg-white">
+      <CustomScrollbar className="h-full" style={{ maxHeight: 'calc(100vh - 4rem)' }}>
         <SidebarSearch 
           valor={consulta}
           onChange={establecerConsulta}
@@ -92,7 +93,10 @@ const Sidebar = ({ onBack = null }) => {
             />
           ))}
         </SidebarSection>
-      </div>
+
+        {/* Espacio extra en la parte inferior */}
+        <div className="mb-16" />
+      </CustomScrollbar>
     </aside>
   );
 };
