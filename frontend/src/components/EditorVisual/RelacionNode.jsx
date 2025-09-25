@@ -50,6 +50,8 @@ const RelacionNode = ({ id, sourceX, sourceY, targetX, targetY, data }) => {
 
   if (localPoints.length === 0) return null;
 
+  console.log('[RelacionNode] Render:', { id, sourceX, sourceY, targetX, targetY, data });
+
   return (
     <>
       <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'auto' }}>
@@ -61,11 +63,14 @@ const RelacionNode = ({ id, sourceX, sourceY, targetX, targetY, data }) => {
           tipoRelacion={tipoRelacion}
         />
 
-        <MultiplicidadLabels
-          localPoints={localPoints}
-          getRenderedPoint={getRenderedPoint}
-          data={data}
-        />
+        {/* Solo muestra multiplicidades si es asociación */}
+        {tipoRelacion === TIPOS_RELACION.ASOCIACION && (
+          <MultiplicidadLabels
+            localPoints={localPoints}
+            getRenderedPoint={getRenderedPoint}
+            data={data}
+          />
+        )}
 
         <ConnectionHandles
           localPoints={localPoints}

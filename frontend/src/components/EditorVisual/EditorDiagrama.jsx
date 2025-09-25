@@ -135,9 +135,20 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
           edgeManagement.setRelacionEditando(null);     // Cierra modal de relación
         }}
         relacionEditando={edgeManagement.relacionEditando}
-        onGuardarRelacion={edgeManagement.handleGuardarRelacion}
+        onGuardarRelacion={(relacionActualizada) => {
+          console.log('[EditorDiagrama] Relación actualizada:', relacionActualizada);
+          editorState.setEdges((edgesPrevios) =>
+            edgesPrevios.map(edge =>
+              edge.id === relacionActualizada.id
+                ? { ...edge, ...relacionActualizada }
+                : edge
+            )
+          );
+          edgeManagement.setRelacionEditando(null); // Cierra el modal
+        }}
         contextMenu={contextMenu}
         contextMenuActions={contextMenu.accionesContextMenu}
+        nodos={editorState.nodes} // ← Agrega esta prop
       />
       
       {/* Notificaciones toast */}

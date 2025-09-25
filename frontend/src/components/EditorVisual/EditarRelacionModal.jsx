@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import InvertirRelacion from './components/InvertirRelacion';
+import { getHandleValidoInvertido } from './utils/getHandleValido'; // ← Usa la función correcta
 
 // Constantes UML reutilizables
 const TIPOS_RELACION = {
@@ -88,7 +90,7 @@ const PreviewRelacion = ({ tipo, multiplicidadSource, multiplicidadTarget }) => 
   );
 };
 
-const EditarRelacionModal = ({ relacion, onGuardar, onCancelar }) => {
+const EditarRelacionModal = ({ relacion, onGuardar, onCancelar, nodos }) => {
   const [formData, setFormData] = useState({
     tipo: TIPOS_RELACION.ASOCIACION,
     multiplicidadSource: '1',
@@ -119,6 +121,42 @@ const EditarRelacionModal = ({ relacion, onGuardar, onCancelar }) => {
         ...formData
       },
     });
+  }, [relacion, formData, onGuardar]);
+
+  // MODIFICADO: Usa getHandleValidoInvertido para asegurar handles válidos
+  const handleInvertirRelacion = useCallback(() => {
+    if (!relacion) return;
+
+    const nuevoSourceHandle = getHandleValidoInvertido(
+      relacion.target,
+      relacion.targetHandle,
+      'source'
+    );
+    const nuevoTargetHandle = getHandleValidoInvertido(
+      relacion.source,
+      relacion.sourceHandle,
+      'target'
+    );
+
+    const nuevaRelacion = {
+      ...relacion,
+      source: relacion.target,
+      target: relacion.source,
+      sourceHandle: nuevoSourceHandle,
+      targetHandle: nuevoTargetHandle,
+      data: {
+        ...relacion.data,
+        multiplicidadSource: formData.multiplicidadTarget,
+        multiplicidadTarget: formData.multiplicidadSource,
+      }
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      multiplicidadSource: nuevaRelacion.data.multiplicidadSource,
+      multiplicidadTarget: nuevaRelacion.data.multiplicidadTarget
+    }));
+    onGuardar?.(nuevaRelacion);
   }, [relacion, formData, onGuardar]);
 
   // Manejar Enter para guardar
@@ -154,6 +192,11 @@ const EditarRelacionModal = ({ relacion, onGuardar, onCancelar }) => {
             multiplicidadSource={formData.multiplicidadSource}
             multiplicidadTarget={formData.multiplicidadTarget}
           />
+
+          {/* Botón para invertir la dirección */}
+          <div className="flex justify-center mb-4">
+            <InvertirRelacion onInvertir={handleInvertirRelacion} />
+          </div>
 
           {/* Tipo de Relación */}
           <SelectUML
