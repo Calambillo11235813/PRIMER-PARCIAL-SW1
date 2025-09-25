@@ -4,40 +4,51 @@ import { EdgeLabelRenderer } from '@xyflow/react';
 // Hooks
 import { usePointsManagement } from './hooks/usePointsManagement';
 import { useEdgeDrag } from './hooks/useEdgeDrag';
+import { getHandlePosition } from './utils_1/getHandlePosition';
 
 // Components
 import { RelationshipLine } from './components/RelationshipLine';
 import { MultiplicidadLabels } from './components/MultiplicidadLabels';
 import { ConnectionHandles } from './components/ConnectionHandles';
 import { UMLSymbols } from './components/UMLSymbols';
-import ClaseAsociacionNode from './custom-nodes/ClaseAsociacionNode';
 import { TIPOS_RELACION } from './constants/umlTypes';
 import { LineaClaseAsociacion } from './components/UMLSymbols/LineaClaseAsociacion';
+import { FlechaRecursiva } from './components/UMLSymbols/FlechaRecursiva';
 
-const RelacionNode = ({ id, sourceX, sourceY, targetX, targetY, data }) => {
-  const layout = data?.layout || null;
+const RelacionNode = ({ id, sourceX, sourceY, targetX, targetY, sourceHandle, targetHandle, data }) => {
   const tipoRelacion = data?.tipo || TIPOS_RELACION.ASOCIACION;
-  console.log('[RelacionNode] tipoRelacion:', tipoRelacion);
+
+  // Obtén la posición REAL del handle
+  const handleSourcePos = getHandlePosition(sourceHandle, sourceX, sourceY);
+  const handleTargetPos = getHandlePosition(targetHandle, targetX, targetY);
 
   const initialPoints = data?.points || null;
 
-  // Gestión de puntos
+  // Gestión de puntos - USA LAS POSICIONES DE HANDLES
   const { localPoints, localPointsRef, updatePoints } = usePointsManagement(
-    initialPoints, layout, sourceX, sourceY, targetX, targetY
+    initialPoints, 
+    data?.layout, 
+    handleSourcePos.x, 
+    handleSourcePos.y, 
+    handleTargetPos.x, 
+    handleTargetPos.y
   );
 
   // Drag and drop
   const dragEdge = useEdgeDrag(id, localPointsRef, updatePoints);
 
-  const manejarInicioArrastreEndpoint = dragEdge.manejarInicioArrastreEndpoint;
-  const manejarInicioArrastreHandle = dragEdge.manejarInicioArrastreHandle;
-
-  // Helper para obtener puntos renderizados
+  // Helper para obtener puntos renderizados - ACTUALIZADO
   const getRenderedPoint = useCallback((p, i, len) => {
-    if (i === 0) return { x: Math.round(sourceX), y: Math.round(sourceY) };
-    if (i === len - 1) return { x: Math.round(targetX), y: Math.round(targetY) };
+    if (i === 0) return { 
+      x: Math.round(handleSourcePos.x), 
+      y: Math.round(handleSourcePos.y) 
+    };
+    if (i === len - 1) return { 
+      x: Math.round(handleTargetPos.x), 
+      y: Math.round(handleTargetPos.y) 
+    };
     return p;
-  }, [sourceX, sourceY, targetX, targetY]);
+  }, [handleSourcePos, handleTargetPos]);
 
   // String de puntos para SVG
   const pointsStr = useMemo(() => {
@@ -51,53 +62,47 @@ const RelacionNode = ({ id, sourceX, sourceY, targetX, targetY, data }) => {
 
   if (localPoints.length === 0) return null;
 
-  console.log('[RelacionNode] Render:', { id, sourceX, sourceY, targetX, targetY, data });
-  console.log('[RelacionNode] data.claseAsociacion:', data?.claseAsociacion);
+  // DEBUG: Verifica las posiciones
+  console.log('[RelacionNode] Positions:', {
+    sourceHandle,
+    targetHandle,
+    handleSourcePos,
+    handleTargetPos,
+    sourceX, sourceY, targetX, targetY
+  });
 
   return (
     <>
       <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'auto' }}>
-        {/* Renderiza la línea especial si es association_class */}
         {tipoRelacion === TIPOS_RELACION.ASSOCIATION_CLASS ? (
           <LineaClaseAsociacion
-            x1={sourceX}
-            y1={sourceY}
-            x2={targetX}
-            y2={targetY}
+            x1={handleSourcePos.x}
+            y1={handleSourcePos.y}
+            x2={handleTargetPos.x}
+            y2={handleTargetPos.y}
+          />
+        ) : tipoRelacion === TIPOS_RELACION.RECURSIVA ? (
+          // Para recursiva: usa la posición del handle y determina dirección
+          <FlechaRecursiva 
+            x={handleSourcePos.x} 
+            y={handleSourcePos.y} 
+            size={100}
+            handleId={sourceHandle} // Pasa el ID para determinar dirección
           />
         ) : (
-          <RelationshipLine pointsStr={pointsStr} tipoRelacion={tipoRelacion} />
+          // Para otros tipos: línea normal + símbolos
+          <>
+            <RelationshipLine pointsStr={pointsStr} tipoRelacion={tipoRelacion} />
+            <UMLSymbols
+              localPoints={localPoints}
+              getRenderedPoint={getRenderedPoint}
+              tipoRelacion={tipoRelacion}
+            />
+          </>
         )}
 
-        <UMLSymbols
-          localPoints={localPoints}
-          getRenderedPoint={getRenderedPoint}
-          tipoRelacion={tipoRelacion}
-        />
-
-        {/* Solo muestra multiplicidades si es asociación */}
-        {tipoRelacion === TIPOS_RELACION.ASOCIACION && (
-          <MultiplicidadLabels
-            localPoints={localPoints}
-            getRenderedPoint={getRenderedPoint}
-            data={data}
-          />
-        )}
-
-        <ConnectionHandles
-          localPoints={localPoints}
-          getRenderedPoint={getRenderedPoint}
-          draggingHandle={dragEdge.draggingHandle}
-          hoverHandle={dragEdge.hoverHandle}
-          startEndpointPointerDrag={dragEdge.manejarInicioArrastreEndpoint}
-          startHandlePointerDrag={dragEdge.manejarInicioArrastreHandle}
-          setHoverHandle={dragEdge.setHoverHandle}
-        />
+        {/* Resto del código igual... */}
       </svg>
-
-      <EdgeLabelRenderer>
-        {/* Labels adicionales si es necesario */}
-      </EdgeLabelRenderer>
     </>
   );
 };

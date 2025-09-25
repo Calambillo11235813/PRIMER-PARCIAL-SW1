@@ -1,15 +1,9 @@
 // src/components/EditorVisual/components/UMLSymbols/index.jsx
-export { RomboUML } from './RomboUML';
-export { TrianguloUML } from './TrianguloUML';
-export { FlechaSimple } from './FlechaSimple';
-
-
-// Componente principal que agrupa todos los símbolos
-import React from 'react';
 import { RomboUML } from './RomboUML';
 import { TrianguloUML } from './TrianguloUML';
-import { FlechaSimple } from './FlechaSimple';
-export { LineaClaseAsociacion } from './LineaClaseAsociacion';
+import { FlechaSimple } from './FlechaSimple'; // ← Añade esta línea
+import { FlechaRecursiva } from './FlechaRecursiva';
+import { LineaClaseAsociacion } from './LineaClaseAsociacion';
 
 /**
  * Renderiza el símbolo UML correspondiente según el tipo de relación.
@@ -40,20 +34,22 @@ export const UMLSymbols = ({ localPoints, getRenderedPoint, tipoRelacion }) => {
     case 'agregacion':
       return <RomboUML x={offsetX} y={offsetY} angle={angle} filled={false} size={12} />;
     case 'herencia':
-     return <FlechaSimple x={offsetX} y={offsetY} angle={angle} size={16} />;
+      return <FlechaSimple x={offsetX} y={offsetY} angle={angle} size={16} />;
     case 'realizacion':
       return <TrianguloUML x={offsetX} y={offsetY} angle={angle} filled={false} size={10} />;
     case 'dependencia':
       return <FlechaSimple x={offsetX} y={offsetY} angle={angle} size={8} />;
-      case 'association_class':
-    return (
-      <LineaClaseAsociacion
-        x1={sourcePoint.x}
-        y1={sourcePoint.y}
-        x2={targetPoint.x}
-        y2={targetPoint.y}
-      />
-    );
+    case 'association_class':
+      return (
+        <LineaClaseAsociacion
+          x1={sourcePoint.x}
+          y1={sourcePoint.y}
+          x2={targetPoint.x}
+          y2={targetPoint.y}
+        />
+      );
+    case 'recursiva':
+      return <FlechaRecursiva x={offsetX} y={offsetY} size={24} />;
     case 'asociacion':
       return null; // ← Asociación: solo línea simple, sin flecha
     default:

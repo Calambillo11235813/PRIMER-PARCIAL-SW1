@@ -5,7 +5,8 @@ export const TIPOS_RELACION = {
   HERENCIA: 'herencia',
   REALIZACION: 'realizacion',
   DEPENDENCIA: 'dependencia',
-  ASSOCIATION_CLASS: 'association_class' // ← Único nombre
+  ASSOCIATION_CLASS: 'association_class',
+  RECURSIVA: 'recursiva' // ← Añadido
 };
 
 export const DISTANCIA_LABEL_CLASE = 20;

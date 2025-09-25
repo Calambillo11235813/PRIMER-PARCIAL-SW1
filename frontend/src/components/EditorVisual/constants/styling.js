@@ -40,7 +40,13 @@ export const ESTILOS_RELACION = {
   [TIPOS_RELACION.ASSOCIATION_CLASS]: {
     stroke: '#333333',
     strokeWidth: 2,
-    strokeDasharray: '6,4', // Línea punteada para clase de asociación
+    strokeDasharray: '6,4',
+    fill: 'none'
+  },
+  [TIPOS_RELACION.RECURSIVA]: {
+    stroke: '#22c55e', // Verde para destacar la recursiva
+    strokeWidth: 2,
+    strokeDasharray: '3,3', // Línea punteada corta
     fill: 'none'
   }
 };
