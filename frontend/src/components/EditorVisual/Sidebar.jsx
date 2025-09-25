@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 
 // Components
 import SidebarItem from './components/SidebarItem';
-import SidebarRelacion from './components/SidebarRelacion';
+import SidebarRelacion from './components/SiderbarRelacion';
 import SidebarSearch from './components/SidebarSearch';
 import SidebarSection from './components/SidebarSection';
-import SidebarColapsado from './components/SidebarColapsado';
+import SidebarColapsado from './components/SidebarColapasado';
 
 // Hooks
 import { useSidebarDrag } from './hooks/useSidebarDrag'; // ← Hook específico para Sidebar

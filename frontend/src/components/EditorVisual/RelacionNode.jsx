@@ -3,7 +3,7 @@ import { EdgeLabelRenderer } from '@xyflow/react';
 
 // Hooks
 import { usePointsManagement } from './hooks/usePointsManagement';
-import { useDragAndDrop } from './hooks/useEdgeDrag';
+import { useEdgeDrag } from './hooks/useEdgeDrag';
 
 // Components
 import { RelationshipLine } from './components/RelationshipLine';
@@ -69,7 +69,11 @@ const RelacionNode = ({ id, sourceX, sourceY, targetX, targetY, data }) => {
         <ConnectionHandles
           localPoints={localPoints}
           getRenderedPoint={getRenderedPoint}
-          {...dragDrop}
+          draggingHandle={dragEdge.draggingHandle}
+          hoverHandle={dragEdge.hoverHandle}
+          startEndpointPointerDrag={dragEdge.manejarInicioArrastreEndpoint}
+          startHandlePointerDrag={dragEdge.manejarInicioArrastreHandle}
+          setHoverHandle={dragEdge.setHoverHandle}
         />
       </svg>
 

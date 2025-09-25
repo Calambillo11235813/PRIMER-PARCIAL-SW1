@@ -1,7 +1,7 @@
 // ClaseNode.jsx (Versión Estilo Enterprise)
 import React from 'react';
 
-const ClaseNode = ({ clase, onEdit, isAbstract = false }) => {
+const ClaseNode = ({ clase = {}, onEdit, isAbstract = false }) => {
   // Función para formatear atributos con visibilidad
   const formatearAtributo = (attr) => {
     // Asume que el atributo puede venir como "-nombre: string" o solo "nombre"
@@ -28,7 +28,7 @@ const ClaseNode = ({ clase, onEdit, isAbstract = false }) => {
         className="font-bold text-center py-1 border-b border-gray-800 bg-gray-50"
         onClick={() => onEdit(clase)} // Permite editar al hacer clic en el nombre
       >
-        {isAbstract ? <i>{clase.nombre}</i> : clase.nombre}
+        {isAbstract ? <i>{clase.nombre || 'Clase'}</i> : (clase.nombre || 'Clase')}
       </div>
       
       {/* Compartimento de Atributos */}

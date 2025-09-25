@@ -227,3 +227,4 @@ const ClaseNodeRF = ({ id, data, selected, onEdgeDragStart }) => {
 
 // Versión memoizada para optimización de rendimiento
 export default React.memo(ClaseNodeRF);
+
