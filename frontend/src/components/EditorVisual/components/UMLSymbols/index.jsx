@@ -9,6 +9,10 @@ import { RomboUML } from './RomboUML';
 import { TrianguloUML } from './TrianguloUML';
 import { FlechaSimple } from './FlechaSimple';
 
+/**
+ * Renderiza el símbolo UML correspondiente según el tipo de relación.
+ * Para asociación, NO renderiza ningún símbolo (solo línea simple).
+ */
 export const UMLSymbols = ({ localPoints, getRenderedPoint, tipoRelacion }) => {
   const len = localPoints.length;
   if (len < 2) return null;
@@ -25,17 +29,16 @@ export const UMLSymbols = ({ localPoints, getRenderedPoint, tipoRelacion }) => {
   switch (tipoRelacion) {
     case 'composicion':
       return <RomboUML x={targetPoint.x} y={targetPoint.y} angle={angle} filled={true} size={12} />;
-    
     case 'agregacion':
       return <RomboUML x={targetPoint.x} y={targetPoint.y} angle={angle} filled={false} size={12} />;
-    
     case 'herencia':
     case 'realizacion':
       return <TrianguloUML x={targetPoint.x} y={targetPoint.y} angle={angle} filled={false} size={10} />;
-    
     case 'dependencia':
-    case 'asociacion':
-    default:
       return <FlechaSimple x={targetPoint.x} y={targetPoint.y} angle={angle} size={8} />;
+    case 'asociacion':
+      return null; // ← Asociación: solo línea simple, sin flecha
+    default:
+      return null;
   }
 };

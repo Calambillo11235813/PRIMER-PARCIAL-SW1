@@ -38,10 +38,9 @@ export const useEdgeManagement = (editorState, history, persistence) => {
   // Tipos de aristas configurados
   const edgeTypes = useMemo(
     () => ({
-      [smartTypeName]: isSmartEdgeComponent ? SmartEdgeResolved : RelacionNode,
       relacionNode: RelacionNode,
     }),
-    [smartTypeName, isSmartEdgeComponent]
+    []
   );
 
   const connectionLineTypeProp = isSmartEdgeComponent ? 'smart' : 'straight';
@@ -63,9 +62,9 @@ export const useEdgeManagement = (editorState, history, persistence) => {
       const nuevaRelacion = {
         ...params,
         id: `edge-${params.source}-${params.target}-${Date.now()}`,
-        type: smartTypeName,
-        sourceHandle: params.sourceHandle,   // ✅ agregar
-        targetHandle: params.targetHandle,   // ✅ agregar
+        type: 'relacionNode', // ← Forzado a tu componente personalizado
+        sourceHandle: params.sourceHandle,
+        targetHandle: params.targetHandle,
         data: {
           tipo: 'asociacion',
           multiplicidadSource: '1',

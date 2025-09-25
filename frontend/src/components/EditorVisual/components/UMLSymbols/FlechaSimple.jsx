@@ -12,12 +12,13 @@ export const FlechaSimple = ({ x, y, angle, size }) => {
 
   const pointsStr = points.map(p => `${p.x},${p.y}`).join(' ');
 
+  // MODIFICACIÓN TEMPORAL: color rojo y tamaño grande
   return (
     <polygon
       points={pointsStr}
-      fill="#333333"
-      stroke="#333333"
-      strokeWidth={2}
+      fill="red"
+      stroke="red"
+      strokeWidth={4}
     />
   );
 };

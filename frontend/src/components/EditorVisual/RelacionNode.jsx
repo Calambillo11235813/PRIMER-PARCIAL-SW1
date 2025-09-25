@@ -17,6 +17,7 @@ import { TIPOS_RELACION } from './constants/umlTypes';
 const RelacionNode = ({ id, sourceX, sourceY, targetX, targetY, data }) => {
   const layout = data?.layout || null;
   const tipoRelacion = data?.tipo || TIPOS_RELACION.ASOCIACION;
+  console.log('RelacionNode - tipoRelacion:', tipoRelacion);
   const initialPoints = data?.points || null;
 
   // Gestión de puntos
