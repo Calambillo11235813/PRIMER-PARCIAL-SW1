@@ -13,7 +13,7 @@ const SmartEdgeResolved =
 export const useEdgeManagement = (editorState, history, persistence) => {
   const { nodes, edges, setEdges } = editorState;
   const { saveState } = history;
-  const { serializarEstructura, persistDiagrama } = persistence;
+  const { serializarEstructura, persistirDiagrama } = persistence;
 
   const [relacionEditando, setRelacionEditando] = useState(null);
   const [modalRelacionAbierto, setModalRelacionAbierto] = useState(false);
@@ -99,10 +99,11 @@ export const useEdgeManagement = (editorState, history, persistence) => {
       setModalRelacionAbierto(false);
       setRelacionEditando(null);
 
-      const estructuraSnapshot = serializarEstructura();
-      persistDiagrama(estructuraSnapshot);
+      // Eliminar la línea que causa el error
+      // const estructuraSnapshot = serializarEstructura();
+      // persistirDiagrama(estructuraSnapshot);
     },
-    [nodes, edges, saveState, setEdges, serializarEstructura, persistDiagrama]
+    [nodes, edges, saveState, setEdges, serializarEstructura, persistirDiagrama]
   );
 
   // Manejo de endpoints de relaciones

@@ -7,8 +7,8 @@
  * @param {Array} edges - Relaciones del diagrama
  * @returns {Object} Estructura serializada del diagrama
  */
-export const serializarEstructura = (nodes, edges) => {
-  const clases = nodes.map((nodo) => ({
+export const serializarEstructura = (nodes = [], edges = []) => {
+  const clases = (nodes || []).map((nodo) => ({
     id: nodo.id,
     nombre: nodo.data?.nombre || nodo.data?.label,
     estereotipo: nodo.data?.estereotipo,
@@ -18,12 +18,12 @@ export const serializarEstructura = (nodes, edges) => {
     position: nodo.position,
   }));
 
-  const relaciones = edges.map((relacion) => ({
+  const relaciones = (edges || []).map((relacion) => ({
     id: relacion.id || `${relacion.source}_${relacion.target}`,
     source: relacion.source,
-    sourceHandle: relacion.sourceHandle || null,   // ✅ Guardar handle de origen
+    sourceHandle: relacion.sourceHandle || null,
     target: relacion.target,
-    targetHandle: relacion.targetHandle || null,   // ✅ Guardar handle de destino
+    targetHandle: relacion.targetHandle || null,
     tipo: relacion.data?.tipo || 'asociacion',
     multiplicidadSource: relacion.data?.multiplicidadSource || '1',
     multiplicidadTarget: relacion.data?.multiplicidadTarget || 'N',

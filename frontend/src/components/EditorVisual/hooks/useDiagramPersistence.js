@@ -174,6 +174,7 @@ export const useDiagramPersistence = (editorState, history, projectId = null, di
 
     // Funciones
     serializarDiagramaActual,
+    serializarEstructura, // ← Agrega esta línea
     persistirDiagrama,
     validarDiagrama,
     manejarGuardadoDiagrama,
