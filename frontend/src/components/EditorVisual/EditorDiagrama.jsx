@@ -11,6 +11,7 @@ import ModalsManager from './components/ModalsManager';
 import ToastNotifications from './components/ToastNotifications';
 import DiagramControls from './components/DiagramControls';
 import ClaseNodeRF from './ClaseNodeRF';
+import Toolbar from './Toolbar'; // Asegúrate de importar Toolbar
 
 /**
  * Componente principal del editor de diagramas UML
@@ -69,8 +70,32 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
     claseNode: ClaseNodeRF
   };
 
+  const handleGuardarRelaciones = () => {
+    const relaciones = editorState.edges.map(edge => ({
+      id: edge.id,
+      source: edge.source,
+      sourceHandle: edge.sourceHandle,
+      target: edge.target,
+      targetHandle: edge.targetHandle,
+      tipo: edge.data?.tipo,
+      multiplicidadSource: edge.data?.multiplicidadSource,
+      multiplicidadTarget: edge.data?.multiplicidadTarget,
+      label: edge.data?.label,
+    }));
+
+    persistence.persistirRelaciones(relaciones);
+    console.log('Relaciones guardadas:', relaciones);
+  };
+
   return (
     <div className="editor-diagrama-container relative" style={{ height: '100%' }}>
+      {/* Toolbar agregado aquí */}
+      <Toolbar
+        handleGuardarRelaciones={handleGuardarRelaciones}
+        onAgregarClase={() => {/* lógica para agregar clase */}}
+        onAgregarRelacion={() => {/* lógica para agregar relación */}}
+      />
+
       {/* Controles del editor */}
       <DiagramControls
         onUndo={history.undo}

@@ -1,7 +1,9 @@
 // hooks/useDiagramPersistence.js
 import { useState, useCallback } from 'react';
+import { toast } from 'react-toastify';
 
 import { crearDiagrama, actualizarDiagrama } from '../../../services/diagramService';
+import { apiClient } from '../../../services/apiConfig';
 
 import { serializarEstructura } from '../utils_1/diagramSerialization';
 
@@ -139,6 +141,26 @@ export const useDiagramPersistence = (editorState, history, projectId = null, di
     setNotificacion(null);
   }, []);
 
+  /**
+   * Persistir relaciones en el backend
+   */
+  const persistirRelaciones = async (relaciones) => {
+    try {
+      // Obtén las clases actuales del diagrama
+      const clases = nodes.map(nodo => nodo.data);
+
+      // Construye la estructura completa
+      const estructura = { clases, relaciones };
+
+      // Usa el endpoint estándar para actualizar el diagrama
+      await actualizarDiagrama(diagramaId, { estructura });
+      toast.success('Relaciones guardadas correctamente');
+    } catch (error) {
+      toast.error('Error al guardar relaciones');
+      console.error(error);
+    }
+  };
+
   return {
     // Estado
     estaGuardando,
@@ -156,6 +178,9 @@ export const useDiagramPersistence = (editorState, history, projectId = null, di
     validarDiagrama,
     manejarGuardadoDiagrama,
     manejarGuardarClase,
-    limpiarNotificacion
+    limpiarNotificacion,
+
+    // Nuevas funciones
+    persistirRelaciones,
   };
 };
