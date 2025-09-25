@@ -17,7 +17,7 @@ import { serializarEstructura } from '../utils_1/diagramSerialization';
 export const useDiagramPersistence = (editorState, history, projectId = null, diagramaId = null) => {
   const { nodes, edges } = editorState;
   const { saveState } = history;
-  
+
   const [estaGuardando, setEstaGuardando] = useState(false);
   const [notificacion, setNotificacion] = useState(null);
   const [erroresValidacion, setErroresValidacion] = useState(null);
@@ -35,7 +35,7 @@ export const useDiagramPersistence = (editorState, history, projectId = null, di
    */
   const persistirDiagrama = useCallback(async (estructuraSnapshot = null) => {
     const estructura = estructuraSnapshot || serializarDiagramaActual();
-    
+
     const payload = {
       nombre: 'Diagrama',
       descripcion: '',
@@ -44,7 +44,7 @@ export const useDiagramPersistence = (editorState, history, projectId = null, di
     };
 
     setEstaGuardando(true);
-    
+
     try {
       let respuesta;
       if (diagramaId) {
@@ -52,19 +52,19 @@ export const useDiagramPersistence = (editorState, history, projectId = null, di
       } else {
         respuesta = await crearDiagrama(payload);
       }
-      
+
       setNotificacion({ tipo: 'exito', mensaje: 'Diagrama guardado correctamente' });
       return respuesta?.data ?? respuesta;
     } catch (error) {
       console.error('Error al guardar el diagrama:', error);
-      
+
       let mensajeError = 'Error al guardar el diagrama';
       if (error.response?.status === 401) {
         mensajeError = 'Error de autenticación. Verifique su sesión.';
       } else if (error.response?.data?.detail) {
         mensajeError = error.response.data.detail;
       }
-      
+
       setNotificacion({ tipo: 'error', mensaje: mensajeError });
       throw error;
     } finally {
@@ -78,19 +78,19 @@ export const useDiagramPersistence = (editorState, history, projectId = null, di
   const validarDiagrama = useCallback(() => {
     // Validaciones básicas del diagrama
     const errores = [];
-    
+
     // Ejemplo: Validar que no haya nodos sin nombre
     nodes.forEach((nodo, index) => {
       if (!nodo.data?.nombre?.trim()) {
         errores.push(`El nodo en posición ${index + 1} no tiene nombre`);
       }
     });
-    
+
     if (errores.length > 0) {
       setErroresValidacion(errores);
       return false;
     }
-    
+
     setErroresValidacion(null);
     return true;
   }, [nodes]);
@@ -116,18 +116,19 @@ export const useDiagramPersistence = (editorState, history, projectId = null, di
    */
   const manejarGuardarClase = useCallback((claseActualizada) => {
     saveState(nodes, edges);
+    console.log('useDiagramPersistence.js - manejarGuardarClase:', claseActualizada);
 
     const nodosActualizados = nodes.map((nodo) =>
-      nodo.id === claseEditando?.id 
-        ? { ...nodo, data: { ...nodo.data, ...claseActualizada } } 
+      nodo.id === claseEditando?.id
+        ? { ...nodo, data: { ...nodo.data, ...claseActualizada } }
         : nodo
     );
 
     // Actualizar nodes en editorState (se manejará por callback)
     const estructuraSnapshot = serializarDiagramaActual(nodosActualizados, edges);
-    
+
     persistirDiagrama(estructuraSnapshot);
-    
+
     return nodosActualizados;
   }, [nodes, edges, claseEditando, saveState, serializarDiagramaActual, persistirDiagrama]);
 
@@ -144,11 +145,11 @@ export const useDiagramPersistence = (editorState, history, projectId = null, di
     notificacion,
     erroresValidacion,
     claseEditando,
-    
+
     // Setters
     setClaseEditando,
     setNotificacion,
-    
+
     // Funciones
     serializarDiagramaActual,
     persistirDiagrama,

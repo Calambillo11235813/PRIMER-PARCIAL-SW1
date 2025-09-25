@@ -94,10 +94,21 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
       {/* Gestor de modales y menús */}
       <ModalsManager
         claseEditando={persistence.claseEditando}
-        relacionEditando={edgeManagement.relacionEditando}
-        onGuardarClase={persistence.manejarGuardarClase}
-        onGuardarRelacion={edgeManagement.handleGuardarRelacion}
+        onGuardarClase={(claseActualizada) => {
+          // Actualiza el estado global de los nodos
+          editorState.setNodes((nodosPrevios) =>
+            nodosPrevios.map(nodo =>
+              nodo.id === claseActualizada.id
+                ? { ...nodo, data: { ...nodo.data, ...claseActualizada } }
+                : nodo
+            )
+          );
+          persistence.manejarGuardarClase(claseActualizada); // Persiste en backend
+          persistence.setClaseEditando(null); // Cierra el modal
+        }}
         onCancelar={() => persistence.setClaseEditando(null)}
+        relacionEditando={edgeManagement.relacionEditando}
+        onGuardarRelacion={edgeManagement.handleGuardarRelacion}
         contextMenu={contextMenu}
         contextMenuActions={contextMenu.accionesContextMenu}
       />

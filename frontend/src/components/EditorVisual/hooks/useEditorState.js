@@ -32,9 +32,9 @@ export const useEditorState = (estructuraInicial) => {
         {
           id: 'edge-test',
           source: initialNodes[0]?.id,
-          sourceHandle: 'top',      // Usa el id de un handle válido de tu nodo
+          sourceHandle: 'top',
           target: initialNodes[1]?.id,
-          targetHandle: 'bottom',   // Usa el id de un handle válido de tu nodo
+          targetHandle: 'bottom',
           type: 'relacionNode',
           data: {
             tipo: 'asociacion',
@@ -48,7 +48,7 @@ export const useEditorState = (estructuraInicial) => {
 
     if (estructuraInicial?.relaciones) {
       const initialEdges = estructuraInicial.relaciones
-        .filter(r => r.sourceHandle && r.targetHandle) // Solo edges válidos
+        .filter(r => r.sourceHandle && r.targetHandle)
         .map((r, idx) => ({
           id: r.id || `edge-${idx}`,
           source: r.source,
@@ -74,6 +74,11 @@ export const useEditorState = (estructuraInicial) => {
   useEffect(() => {
     setEdges((eds) => eds.filter(e => e.sourceHandle && e.targetHandle));
   }, [edges, setEdges]);
+
+  // Agrega un efecto para depurar cambios en los nodos
+  useEffect(() => {
+    console.log('useEditorState - Nodos actualizados:', nodes);
+  }, [nodes]);
 
   return {
     nodes, setNodes, onNodesChange,

@@ -52,6 +52,11 @@ export const useSidebarDrag = () => {
    * @param {string} elemento.id - Identificador único del elemento
    */
   const manejarInicioArrastre = (evento, elemento) => {
+    if (!elemento || !elemento.type) {
+      console.warn('Sidebar - Elemento inválido en arrastre:', elemento);
+      return;
+    }
+
     console.debug('Sidebar - Iniciando arrastre de elemento:', elemento);
 
     try {

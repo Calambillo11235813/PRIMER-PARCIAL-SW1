@@ -28,7 +28,7 @@ const SidebarItem = ({ elemento, onDragStart, onDragEnd }) => (
   <div
     className={`flex items-center bg-green-100 border border-green-600 rounded-lg px-3 py-2 mb-3 cursor-grab shadow-sm transition hover:bg-green-200`}
     draggable
-    onDragStart={onDragStart}
+    onDragStart={(e) => onDragStart(e, elemento)} // ← CORREGIDO: pasa el elemento
     onDragEnd={onDragEnd}
     title={elemento.hint}
   >
