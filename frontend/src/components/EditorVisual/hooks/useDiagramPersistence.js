@@ -36,13 +36,14 @@ export const useDiagramPersistence = (editorState, history, projectId = null, di
    * Persistir diagrama en el backend
    */
   const persistirDiagrama = useCallback(async (estructuraSnapshot = null) => {
+    // Si recibe { nodos, relaciones }, úsalo directamente
     const estructura = estructuraSnapshot || serializarDiagramaActual();
 
     const payload = {
       nombre: 'Diagrama',
       descripcion: '',
       proyecto: projectId,
-      estructura
+      estructura // ← ahora puede ser { nodos, relaciones }
     };
 
     setEstaGuardando(true);

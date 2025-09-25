@@ -88,6 +88,30 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
     console.log('Relaciones guardadas:', relaciones);
   };
 
+  const handleGuardarDiagramaCompleto = () => {
+    const nodos = editorState.nodes.map(nodo => ({
+      id: nodo.id,
+      type: nodo.type,
+      position: nodo.position,
+      data: nodo.data
+    }));
+
+    const relaciones = editorState.edges.map(edge => ({
+      id: edge.id,
+      source: edge.source,
+      sourceHandle: edge.sourceHandle,
+      target: edge.target,
+      targetHandle: edge.targetHandle,
+      tipo: edge.data?.tipo,
+      multiplicidadSource: edge.data?.multiplicidadSource,
+      multiplicidadTarget: edge.data?.multiplicidadTarget,
+      label: edge.data?.label,
+    }));
+
+    persistence.persistirDiagrama({ nodos, relaciones });
+    console.log('Diagrama guardado:', { nodos, relaciones });
+  };
+
   return (
     <div className="editor-diagrama-container relative" style={{ height: '100%' }}>
       {/* Toolbar agregado aquí */}
@@ -128,6 +152,7 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
                 : nodo
             )
           );
+          handleGuardarDiagramaCompleto(); // ← Añade esto
           persistence.manejarGuardarClase(claseActualizada);
           persistence.setClaseEditando(null);
         }}
@@ -205,6 +230,7 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
                 : edge
             )
           );
+          handleGuardarDiagramaCompleto(); // ← Añade esto
           edgeManagement.setRelacionEditando(null); // Cierra el modal
         }}
         contextMenu={contextMenu}
