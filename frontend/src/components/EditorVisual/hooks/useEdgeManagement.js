@@ -163,6 +163,7 @@ export const useEdgeManagement = (editorState, history, persistence) => {
 
   return {
     relacionEditando,
+    setRelacionEditando, // ← Agrega esto
     modalRelacionAbierto,
     setModalRelacionAbierto,
     edgeTypes,

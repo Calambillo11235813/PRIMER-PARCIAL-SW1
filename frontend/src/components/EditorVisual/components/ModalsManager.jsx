@@ -48,7 +48,7 @@ const ModalsManager = ({
         <EditarRelacionModal
           relacion={relacionEditando}
           onGuardar={onGuardarRelacion}
-          onCancelar={() => onCancelar()}
+          onCancelar={onCancelar} // ← Modificado: pasa el callback directamente
         />
       )}
 

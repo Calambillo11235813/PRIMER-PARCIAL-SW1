@@ -12,6 +12,7 @@ import { FlechaSimple } from './FlechaSimple';
 /**
  * Renderiza el símbolo UML correspondiente según el tipo de relación.
  * Para asociación, NO renderiza ningún símbolo (solo línea simple).
+ * Los símbolos se dibujan con un pequeño offset para no quedar pegados al nodo destino.
  */
 export const UMLSymbols = ({ localPoints, getRenderedPoint, tipoRelacion }) => {
   const len = localPoints.length;
@@ -25,17 +26,23 @@ export const UMLSymbols = ({ localPoints, getRenderedPoint, tipoRelacion }) => {
   const dy = targetPoint.y - sourcePoint.y;
   const angle = Math.atan2(dy, dx);
 
+  // Offset para separar el símbolo del nodo destino
+  const OFFSET = 16;
+  const offsetX = targetPoint.x - Math.cos(angle) * OFFSET;
+  const offsetY = targetPoint.y - Math.sin(angle) * OFFSET;
+
   // Renderizar símbolo según el tipo de relación
   switch (tipoRelacion) {
     case 'composicion':
-      return <RomboUML x={targetPoint.x} y={targetPoint.y} angle={angle} filled={true} size={12} />;
+      return <RomboUML x={offsetX} y={offsetY} angle={angle} filled={true} size={12} />;
     case 'agregacion':
-      return <RomboUML x={targetPoint.x} y={targetPoint.y} angle={angle} filled={false} size={12} />;
+      return <RomboUML x={offsetX} y={offsetY} angle={angle} filled={false} size={12} />;
     case 'herencia':
+     return <FlechaSimple x={offsetX} y={offsetY} angle={angle} size={16} />;
     case 'realizacion':
-      return <TrianguloUML x={targetPoint.x} y={targetPoint.y} angle={angle} filled={false} size={10} />;
+      return <TrianguloUML x={offsetX} y={offsetY} angle={angle} filled={false} size={10} />;
     case 'dependencia':
-      return <FlechaSimple x={targetPoint.x} y={targetPoint.y} angle={angle} size={8} />;
+      return <FlechaSimple x={offsetX} y={offsetY} angle={angle} size={8} />;
     case 'asociacion':
       return null; // ← Asociación: solo línea simple, sin flecha
     default:
