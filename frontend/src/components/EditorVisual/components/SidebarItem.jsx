@@ -1,4 +1,13 @@
 import React from 'react';
+import ClaseIcon from './UMLSymbols/ClaseIcon';
+import InterfaceIcon from './UMLSymbols/InterfaceIcon';
+// Agrega más íconos si tienes otros tipos
+
+const iconosElemento = {
+  clase: <ClaseIcon />,
+  interface: <InterfaceIcon />,
+  // Otros tipos si los tienes
+};
 
 /**
  * Componente para un elemento arrastrable del sidebar
@@ -15,35 +24,27 @@ import React from 'react';
  *   onDragEnd={manejarFinArrastre}
  * />
  */
-const SidebarItem = ({ elemento, onDragStart, onDragEnd }) => {
-  return (
-    <div
-      draggable
-      onDragStart={(e) => onDragStart(e, elemento)}
-      onDragEnd={onDragEnd}
-      title={elemento.hint}
-      className={`flex items-center p-3 rounded-xl cursor-grab border ${elemento.border} ${elemento.bg} hover:shadow-md transition-all duration-200`}
-    >
-      <div className="flex items-center justify-center rounded-lg bg-white w-10 h-10 shadow-inner border border-green-200">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-green-600">
-          <rect x="3" y="4" width="18" height="16" stroke="currentColor" strokeWidth="1.2" rx="2" />
-          <path d="M3 10h18" stroke="currentColor" strokeWidth="1.2" />
-          <path d="M8 4v6" stroke="currentColor" strokeWidth="1.2" />
-        </svg>
-      </div>
-
-      <div className="ml-3 flex-1 min-w-0">
-        <div className="text-sm font-semibold text-green-900 truncate">
-          {elemento.label}
-        </div>
-        <div className="text-xs text-green-600 truncate">
-          {elemento.hint}
-        </div>
-      </div>
-
-      <div className="text-green-400 text-lg">⬌</div>
+const SidebarItem = ({ elemento, onDragStart, onDragEnd }) => (
+  <div
+    className={`flex items-center bg-green-100 border border-green-600 rounded-lg px-3 py-2 mb-3 cursor-grab shadow-sm transition hover:bg-green-200`}
+    draggable
+    onDragStart={onDragStart}
+    onDragEnd={onDragEnd}
+    title={elemento.hint}
+  >
+    <div className="flex items-center justify-center rounded-lg bg-gray-50 w-10 h-10 shadow-inner border border-gray-200">
+      {iconosElemento[elemento.tipo] || <ClaseIcon />}
     </div>
-  );
-};
+    <div className="ml-3 flex-1 min-w-0">
+      <div className="text-sm font-semibold text-gray-800 truncate">
+        {elemento.label}
+      </div>
+      <div className="text-xs text-gray-500 truncate">
+        {elemento.hint}
+      </div>
+    </div>
+    <div className="text-green-300 text-lg">⬌</div>
+  </div>
+);
 
 export default React.memo(SidebarItem);

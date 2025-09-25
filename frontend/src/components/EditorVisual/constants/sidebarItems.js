@@ -1,3 +1,5 @@
+import { TIPOS_RELACION } from './umlTypes';
+
 /**
  * Constantes para los elementos del sidebar del editor UML
  */
@@ -22,52 +24,10 @@ export const ELEMENTOS_UML = [
 ];
 
 export const RELACIONES_UML = [
-  { 
-    id: 'asociacion', 
-    label: 'Asociación', 
-    hint: 'Línea simple', 
-    bg: 'bg-white', 
-    border: 'border-gray-200', 
-    type: 'relacion-asociacion' 
-  },
-  { 
-    id: 'agregacion', 
-    label: 'Agregación', 
-    hint: 'Diamante hueco (agregación)', 
-    bg: 'bg-white', 
-    border: 'border-gray-200', 
-    type: 'relacion-agregacion' 
-  },
-  { 
-    id: 'composicion', 
-    label: 'Composición', 
-    hint: 'Diamante relleno (composición)', 
-    bg: 'bg-white', 
-    border: 'border-gray-200', 
-    type: 'relacion-composicion' 
-  },
-  { 
-    id: 'generalizacion', 
-    label: 'Generalización', 
-    hint: 'Triángulo hueco (generalización)', 
-    bg: 'bg-white', 
-    border: 'border-gray-200', 
-    type: 'relacion-generalizacion' 
-  },
-  { 
-    id: 'realizacion', 
-    label: 'Realización', 
-    hint: 'Línea punteada + triángulo hueco (realización)', 
-    bg: 'bg-white', 
-    border: 'border-gray-200', 
-    type: 'relacion-realizacion' 
-  },
-  { 
-    id: 'association-class', 
-    label: 'Association Class', 
-    hint: 'Asociación con caja de clase', 
-    bg: 'bg-white', 
-    border: 'border-gray-200', 
-    type: 'relacion-association-class' 
-  },
+  { id: TIPOS_RELACION.ASOCIACION, label: 'Asociación', hint: 'Línea simple', descripcion: '...' },
+  { id: TIPOS_RELACION.AGREGACION, label: 'Agregación', hint: 'Diamante hueco', descripcion: '...' },
+  { id: TIPOS_RELACION.COMPOSICION, label: 'Composición', hint: 'Diamante relleno', descripcion: '...' },
+  { id: TIPOS_RELACION.HERENCIA, label: 'Generalización', hint: 'Triángulo hueco', descripcion: '...' },
+  { id: TIPOS_RELACION.REALIZACION, label: 'Realización', hint: 'Línea punteada + triángulo', descripcion: '...' },
+  { id: TIPOS_RELACION.ASSOCIATION_CLASS, label: 'Association Class', hint: 'Asociación con caja de clase', descripcion: '...' },
 ];
