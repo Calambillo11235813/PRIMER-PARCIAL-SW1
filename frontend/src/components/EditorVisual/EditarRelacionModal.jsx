@@ -3,6 +3,16 @@ import InvertirRelacion from './components/InvertirRelacion';
 import { getHandleValidoInvertido } from './utils/getHandleValido'; // ← Usa la función correcta
 import { TIPOS_RELACION } from './constants/umlTypes'; // Usa la constante global
 
+
+
+
+let logCountEditarRelacionModal = 0;
+function logEditarRelacionModal(...args) {
+  if (logCountEditarRelacionModal < 3) {
+    console.log('[EditarRelacionModal]', ...args);
+    logCountEditarRelacionModal++;
+  }
+}
 const MULTIPLICIDADES = ['1', 'N', '0..1', '1..*', '0..*', '*'];
 
 const TIPOS_RELACION_LABELS = {
@@ -92,6 +102,7 @@ const EditarRelacionModal = ({ relacion, onGuardar, onCancelar, nodos }) => {
   // Inicializar con datos de la relación
   useEffect(() => {
     if (relacion) {
+      logEditarRelacionModal('Inicializando con relación:', relacion);
       console.log('[EditarRelacionModal] Inicializando con relación:', relacion);
       setFormData({
         tipo: relacion.data?.tipo || TIPOS_RELACION.ASOCIACION,
@@ -111,24 +122,22 @@ const EditarRelacionModal = ({ relacion, onGuardar, onCancelar, nodos }) => {
       ...relacion,
       data: {
         ...relacion.data,
-        ...formData
+        ...formData // ← Usa el estado actual directamente
       },
     };
 
     // Si el tipo es association_class, agrega la clase intermedia
     if (formData.tipo === TIPOS_RELACION.ASSOCIATION_CLASS) {
-      // Aquí deberías obtener los datos de la clase intermedia desde el formulario o selección
-      // Ejemplo temporal:
       nuevaRelacion.data.claseAsociacion = {
         id: 'claseAsociacion-' + Date.now(),
         nombre: 'ClaseIntermedia',
         atributos: [],
         metodos: []
       };
-      console.log('[EditarRelacionModal] Asignando clase intermedia:', nuevaRelacion.data.claseAsociacion);
+      logEditarRelacionModal('Asignando clase intermedia:', nuevaRelacion.data.claseAsociacion);
     }
 
-    console.log('[EditarRelacionModal] Guardando relación:', nuevaRelacion);
+    logEditarRelacionModal('Guardando relación:', nuevaRelacion);
     onGuardar?.(nuevaRelacion);
   }, [relacion, formData, onGuardar]);
 

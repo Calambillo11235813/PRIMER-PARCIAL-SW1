@@ -11,8 +11,16 @@ import ModalsManager from './components/ModalsManager';
 import ToastNotifications from './components/ToastNotifications';
 import DiagramControls from './components/DiagramControls';
 import ClaseNodeRF from './ClaseNodeRF';
-import Toolbar from './Toolbar'; // Asegúrate de importar Toolbar
-import { TIPOS_RELACION } from './constants/umlTypes'; // Asegúrate de importar esto
+import Toolbar from './Toolbar';
+import { TIPOS_RELACION } from './constants/umlTypes';
+
+let logCountEditorDiagrama = 0;
+function logEditorDiagrama(...args) {
+  if (logCountEditorDiagrama < 3) {
+    console.log('[EditorDiagrama]', ...args);
+    logCountEditorDiagrama++;
+  }
+}
 
 /**
  * Componente principal del editor de diagramas UML
@@ -33,15 +41,37 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
   const contextMenu = useContextMenu(editorState, history, edgeManagement, persistence);
   const debounceTimeout = useRef(null);
 
-  console.log('EditorDiagrama - estructuraInicial recibida:', estructuraInicial);
+  // Handler para guardar el diagrama completo
+  const handleGuardarDiagramaCompleto = useCallback(() => {
+    const nodos = editorState.nodes.map(nodo => ({
+      id: nodo.id,
+      type: nodo.type,
+      position: nodo.position,
+      data: nodo.data
+    }));
+
+    const relaciones = editorState.edges.map(edge => ({
+      id: edge.id,
+      source: edge.source,
+      sourceHandle: edge.sourceHandle,
+      target: edge.target,
+      targetHandle: edge.targetHandle,
+      tipo: edge.data?.tipo,
+      multiplicidadSource: edge.data?.multiplicidadSource,
+      multiplicidadTarget: edge.data?.multiplicidadTarget,
+      label: edge.data?.label,
+    }));
+
+    persistence.persistirDiagrama({ nodos, relaciones });
+    console.log('Diagrama guardado:', { nodos, relaciones });
+  }, [editorState.nodes, editorState.edges, persistence]);
 
   // Efecto para limpiar notificaciones automáticamente
   useEffect(() => {
     if (persistence.notificacion) {
       const timer = setTimeout(() => {
-
         persistence.limpiarNotificacion();
-      }, 4000);//
+      }, 4000);
       return () => clearTimeout(timer);
     }
   }, [persistence.notificacion, persistence.limpiarNotificacion]);
@@ -60,29 +90,19 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
     return () => document.removeEventListener('keydown', manejarAtajoTeclado);
   }, [manejarAtajoTeclado]);
 
-  // Efecto para guardado automático
+  // Guardado automático con debounce
   useEffect(() => {
-  
-
-    // Log para ver si la validación permite guardar
-    
-
     if (!editorState.isLoading && persistence.validarDiagrama()) {
       clearTimeout(debounceTimeout.current);
       debounceTimeout.current = setTimeout(() => {
         console.log('Guardado automático disparado');
         console.log('Nodos enviados al guardar:', editorState.nodes);
         console.log('Relaciones enviadas al guardar:', editorState.edges);
-        handleGuardarDiagramaCompleto(); // Usa la misma función que el Toolbar
+        handleGuardarDiagramaCompleto();
       }, 1500);
     }
     return () => clearTimeout(debounceTimeout.current);
-  }, [editorState.nodes, editorState.edges, editorState.isLoading, persistence]);
-
-  useEffect(() => {
-    console.log('EditorDiagrama - nodos actuales:', editorState.nodes);
-    console.log('EditorDiagrama - relaciones actuales:', editorState.edges);
-  }, [editorState.nodes, editorState.edges]);
+  }, [editorState.nodes, editorState.edges, editorState.isLoading, persistence, handleGuardarDiagramaCompleto]);
 
   if (editorState.isLoading) {
     return (
@@ -114,30 +134,6 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
 
     persistence.persistirRelaciones(relaciones);
     console.log('Relaciones guardadas:', relaciones);
-  };
-
-  const handleGuardarDiagramaCompleto = () => {
-    const nodos = editorState.nodes.map(nodo => ({
-      id: nodo.id,
-      type: nodo.type,
-      position: nodo.position,
-      data: nodo.data
-    }));
-
-    const relaciones = editorState.edges.map(edge => ({
-      id: edge.id,
-      source: edge.source,
-      sourceHandle: edge.sourceHandle,
-      target: edge.target,
-      targetHandle: edge.targetHandle,
-      tipo: edge.data?.tipo,
-      multiplicidadSource: edge.data?.multiplicidadSource,
-      multiplicidadTarget: edge.data?.multiplicidadTarget,
-      label: edge.data?.label,
-    }));
-
-    persistence.persistirDiagrama({ nodos, relaciones });
-    console.log('Diagrama guardado:', { nodos, relaciones });
   };
 
   return (
@@ -195,9 +191,9 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
         }}
         relacionEditando={edgeManagement.relacionEditando}
         onGuardarRelacion={(relacionActualizada) => {
-          console.log('[EditorDiagrama] Relación actualizada:', relacionActualizada);
+          logEditorDiagrama('Relación actualizada:', relacionActualizada);
 
-          // Si es association_class, agrega el nodo y los edges correspondientes
+          // Si es association_class, lógica especial (no modificar)
           if (
             relacionActualizada.data?.tipo === TIPOS_RELACION.ASSOCIATION_CLASS &&
             relacionActualizada.data?.claseAsociacion
@@ -219,7 +215,7 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
                   ...nodosPrevios,
                   {
                     id: relacionActualizada.data.claseAsociacion.id,
-                    type: 'claseNode', // O 'associationClassNode' si tienes un tipo específico
+                    type: 'claseNode',
                     position: { x: posX, y: posY },
                     data: relacionActualizada.data.claseAsociacion
                   }
@@ -251,20 +247,37 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
               return [...edgesFiltrados, edgeA, edgeB];
             });
 
+            // *** GUARDA LOS CAMBIOS EN EL BACKEND ***
+            handleGuardarDiagramaCompleto();
+
             edgeManagement.setRelacionEditando(null); // Cierra el modal
             return; // No actualices el edge original
           }
 
-          // Si no es association_class, actualiza el edge normalmente
+          // Actualiza el edge normalmente, fusionando los datos
           editorState.setEdges((edgesPrevios) =>
             edgesPrevios.map(edge =>
               edge.id === relacionActualizada.id
-                ? { ...edge, ...relacionActualizada }
+                ? {
+                    ...edge,
+                    source: relacionActualizada.source,
+                    sourceHandle: relacionActualizada.sourceHandle,
+                    target: relacionActualizada.target,
+                    targetHandle: relacionActualizada.targetHandle,
+                    data: {
+                      ...edge.data,
+                      ...relacionActualizada.data,
+                    },
+                  }
                 : edge
             )
           );
-          handleGuardarDiagramaCompleto(); // ← Añade esto
-          edgeManagement.setRelacionEditando(null); // Cierra el modal
+          handleGuardarDiagramaCompleto();
+
+          // Limpia el estado del modal después de guardar
+          setTimeout(() => {
+            edgeManagement.setRelacionEditando(null);
+          }, 100); // Da tiempo a React para actualizar el estado antes de cerrar el modal
         }}
         contextMenu={contextMenu}
         contextMenuActions={contextMenu.accionesContextMenu}

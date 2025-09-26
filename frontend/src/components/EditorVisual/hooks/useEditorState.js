@@ -8,13 +8,12 @@ export const useEditorState = (estructuraInicial) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Log para depuración: estructura inicial recibida
-    console.log('useEditorState - estructuraInicial:', estructuraInicial);
+
 
     // Si la estructura tiene nodos, inicialízalos directamente
     if (estructuraInicial?.nodos) {
       setNodes(estructuraInicial.nodos);
-      console.log('useEditorState - initialNodes (nodos):', estructuraInicial.nodos);
+      
     } else if (estructuraInicial?.clases) {
       const initialNodes = estructuraInicial.clases.map((clase, idx) => ({
         id: clase.id || `node-${idx}`,
@@ -23,8 +22,7 @@ export const useEditorState = (estructuraInicial) => {
         data: { ...clase, label: clase.nombre || `Clase ${idx + 1}` }
       }));
 
-      // Log para depuración: nodos iniciales generados desde clases
-      console.log('useEditorState - initialNodes (clases):', initialNodes);
+      
 
       setNodes(initialNodes);
 
@@ -65,8 +63,7 @@ export const useEditorState = (estructuraInicial) => {
           },
         }));
 
-      // Log para depuración: edges iniciales generados desde relaciones
-      console.log('useEditorState - initialEdges (relaciones):', initialEdges);
+      
 
       setEdges(initialEdges);
     }
@@ -87,12 +84,12 @@ export const useEditorState = (estructuraInicial) => {
   // Agrega un efecto para depurar cambios en los nodos
   useEffect(() => {
     // Log para depuración: nodos actualizados
-    console.log('useEditorState - Nodos actualizados:', nodes);
+  
   }, [nodes]);
 
   useEffect(() => {
     // Log para depuración: edges actualizados
-    console.log('useEditorState - Edges actualizados:', edges);
+
   }, [edges]);
 
   return {

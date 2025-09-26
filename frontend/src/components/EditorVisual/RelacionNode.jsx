@@ -62,14 +62,7 @@ const RelacionNode = ({ id, sourceX, sourceY, targetX, targetY, sourceHandle, ta
 
   if (localPoints.length === 0) return null;
 
-  // DEBUG: Verifica las posiciones
-  console.log('[RelacionNode] Positions:', {
-    sourceHandle,
-    targetHandle,
-    handleSourcePos,
-    handleTargetPos,
-    sourceX, sourceY, targetX, targetY
-  });
+  
 
   return (
     <>

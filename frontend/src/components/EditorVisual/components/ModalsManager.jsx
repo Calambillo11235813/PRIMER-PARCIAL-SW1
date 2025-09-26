@@ -4,6 +4,14 @@ import EditarClaseModal from '../EditarClaseModal';
 import EditarRelacionModal from '../EditarRelacionModal';
 import ContextMenu from '../ContextMenu';
 
+
+let logCountModalsManager = 0;
+function logModalsManager(...args) {
+  if (logCountModalsManager < 3) {
+    console.log('[ModalsManager]', ...args);
+    logCountModalsManager++;
+  }
+}
 /**
  * Gestor centralizado de todos los modales y ventanas emergentes
  * 
@@ -45,11 +53,14 @@ const ModalsManager = ({
 
       {/* Modal de edición de relación */}
       {relacionEditando && (
+        <>
+        {logModalsManager('Modal relación editando:', relacionEditando)}
         <EditarRelacionModal
           relacion={relacionEditando}
           onGuardar={onGuardarRelacion}
           onCancelar={onCancelar} // ← Modificado: pasa el callback directamente
         />
+        </>
       )}
 
       {/* Menú contextual */}
@@ -72,5 +83,7 @@ const ModalsManager = ({
     </>
   );
 };
+
+
 
 export default ModalsManager;
