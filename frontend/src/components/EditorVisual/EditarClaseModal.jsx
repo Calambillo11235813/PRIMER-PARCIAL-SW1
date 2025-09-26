@@ -239,7 +239,9 @@ const EditarClaseModal = ({ clase = {}, onGuardar, onCancelar }) => {
         tipo: m.tipo.trim()
       }))
     };
+    console.log('Payload al guardar clase:', payload);
     onGuardar?.(payload);
+    console.log('onGuardar ejecutado');
   };
 
   // Configuración de campos para las tablas

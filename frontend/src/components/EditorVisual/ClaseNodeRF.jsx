@@ -59,7 +59,7 @@ const VisibilidadTypes = {
  * data: { nombre, estereotipo, atributos: [{vis, nombre, tipo, mult}], metodos: [{vis, nombre, firma}], color? }
  */
 const ClaseNodeRF = ({ id, data, selected, onEdgeDragStart }) => {
-   console.log('ClaseNodeRF - data recibida:', data); // Depuración
+  
   const nombre = data?.nombre || 'Clase';
   const estereotipo = data?.estereotipo;
   const atributos = data?.atributos || [];

@@ -14,6 +14,7 @@ from pathlib import Path
 
 import os
 from dotenv import load_dotenv
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -197,3 +198,13 @@ SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '0')) if not DEBUG el
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
+
+# Configuración de tiempo de vida de los tokens JWT
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),   # Ejemplo: 15 minutos
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),      # Ejemplo: 7 días
+    "ROTATE_REFRESH_TOKENS": True,                    # Opcional: refresca el refresh token en cada uso
+    "BLACKLIST_AFTER_ROTATION": True,                 # Opcional: lista negra tras rotación
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+}

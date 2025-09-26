@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import EditorDiagrama from '../components/EditorVisual/EditorDiagrama';
 import { obtenerDiagramaPorId } from '../services/diagramService';  // Cambiado: importa el servicio correcto
 import Sidebar from '../components/EditorVisual/Sidebar'; // Asegúrate de que la ruta sea correcta
@@ -45,6 +45,15 @@ const EditorDiagramaPage = () => {
     cargar();
   }, [idDiagrama, navigate]);
 
+  // Log para depuración: estructura recibida desde la API
+  React.useEffect(() => {
+    if (estructura) {
+      console.log('EditorDiagramaPage - estructura recibida:', estructura);
+      console.log('EditorDiagramaPage - estructura.nodos:', estructura.estructura?.nodos);
+      console.log('EditorDiagramaPage - estructura.relaciones:', estructura.estructura?.relaciones);
+    }
+  }, [estructura]);
+
   if (loading) return <div className="p-8">Cargando diagrama...</div>;
   if (error) return <div className="p-8 text-red-600">{error}</div>;
 
@@ -63,15 +72,17 @@ const EditorDiagramaPage = () => {
           }
         }} />
         <div style={{ flex: 1, height: '100vh' }}>
-          <EditorDiagrama
-            estructuraInicial={estructura}
-            projectId={projectId}
-            diagramaId={diagramaId}
-            onGuardar={(respuestaBackend) => {
-              if (respuestaBackend && respuestaBackend.id) setDiagramaId(respuestaBackend.id);
-              if (respuestaBackend && respuestaBackend.estructura) setEstructura(respuestaBackend.estructura);
-            }}
-          />
+          {estructura && (
+            <EditorDiagrama
+              estructuraInicial={estructura}
+              projectId={projectId}
+              diagramaId={diagramaId}
+              onGuardar={(respuestaBackend) => {
+                if (respuestaBackend && respuestaBackend.id) setDiagramaId(respuestaBackend.id);
+                if (respuestaBackend && respuestaBackend.estructura) setEstructura(respuestaBackend.estructura);
+              }}
+            />
+          )}
         </div>
       </div>
     </div>

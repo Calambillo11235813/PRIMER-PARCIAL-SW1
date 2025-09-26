@@ -3,7 +3,6 @@ import React, { useMemo } from 'react';
 import { ReactFlow, Controls, Background } from '@xyflow/react';
 import ClaseNodeRF from '../ClaseNodeRF'; // Debe ser ClaseNodeRF, no ClaseNode
 import RelacionNode from '../RelacionNode';
-import TestNode from '../TestNode'; // Agrega la importación
 import { RelationshipLine } from './RelationshipLine';
 import { TIPOS_RELACION } from '../constants/umlTypes';
 
@@ -54,7 +53,7 @@ const DiagramCanvas = ({
   // Tipos de nodos memoizados
   const nodeTypes = useMemo(() => ({
     claseNode: ClaseNodeRF,
-    testNode: TestNode // Agrega el nuevo tipo
+   
   }), []);
 
   // Handlers de interacción con nodos

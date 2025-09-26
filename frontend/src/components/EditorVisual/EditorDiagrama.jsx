@@ -1,5 +1,5 @@
 // EditorDiagrama.jsx
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { useEditorState } from './hooks/useEditorState';
 import { useDiagramHistory } from './hooks/useDiagramHistory';
 import { useDiagramPersistence } from './hooks/useDiagramPersistence';
@@ -31,13 +31,17 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
   const dragDrop = useDiagramDragAndDrop(editorState, history);
   const edgeManagement = useEdgeManagement(editorState, history, persistence);
   const contextMenu = useContextMenu(editorState, history, edgeManagement, persistence);
+  const debounceTimeout = useRef(null);
+
+  console.log('EditorDiagrama - estructuraInicial recibida:', estructuraInicial);
 
   // Efecto para limpiar notificaciones automáticamente
   useEffect(() => {
     if (persistence.notificacion) {
       const timer = setTimeout(() => {
+
         persistence.limpiarNotificacion();
-      }, 4000);
+      }, 4000);//
       return () => clearTimeout(timer);
     }
   }, [persistence.notificacion, persistence.limpiarNotificacion]);
@@ -55,6 +59,30 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
     document.addEventListener('keydown', manejarAtajoTeclado);
     return () => document.removeEventListener('keydown', manejarAtajoTeclado);
   }, [manejarAtajoTeclado]);
+
+  // Efecto para guardado automático
+  useEffect(() => {
+  
+
+    // Log para ver si la validación permite guardar
+    
+
+    if (!editorState.isLoading && persistence.validarDiagrama()) {
+      clearTimeout(debounceTimeout.current);
+      debounceTimeout.current = setTimeout(() => {
+        console.log('Guardado automático disparado');
+        console.log('Nodos enviados al guardar:', editorState.nodes);
+        console.log('Relaciones enviadas al guardar:', editorState.edges);
+        handleGuardarDiagramaCompleto(); // Usa la misma función que el Toolbar
+      }, 1500);
+    }
+    return () => clearTimeout(debounceTimeout.current);
+  }, [editorState.nodes, editorState.edges, editorState.isLoading, persistence]);
+
+  useEffect(() => {
+    console.log('EditorDiagrama - nodos actuales:', editorState.nodes);
+    console.log('EditorDiagrama - relaciones actuales:', editorState.edges);
+  }, [editorState.nodes, editorState.edges]);
 
   if (editorState.isLoading) {
     return (
@@ -145,6 +173,7 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
       <ModalsManager
         claseEditando={persistence.claseEditando}
         onGuardarClase={(claseActualizada) => {
+          console.log('Antes de actualizar nodos:', editorState.nodes);
           editorState.setNodes((nodosPrevios) =>
             nodosPrevios.map(nodo =>
               nodo.id === claseActualizada.id
@@ -152,7 +181,11 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
                 : nodo
             )
           );
-          handleGuardarDiagramaCompleto(); // ← Añade esto
+          setTimeout(() => {
+            console.log('Después de actualizar nodos:', editorState.nodes);
+          }, 500); // Da tiempo a React para actualizar el estado
+
+          handleGuardarDiagramaCompleto();
           persistence.manejarGuardarClase(claseActualizada);
           persistence.setClaseEditando(null);
         }}
