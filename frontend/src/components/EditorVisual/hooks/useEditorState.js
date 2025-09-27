@@ -13,17 +13,21 @@ export const useEditorState = (estructuraInicial) => {
     // Si la estructura tiene nodos, inicialízalos directamente
     if (estructuraInicial?.nodos) {
       setNodes(estructuraInicial.nodos);
-      
+
     } else if (estructuraInicial?.clases) {
-      const initialNodes = estructuraInicial.clases.map((clase, idx) => ({
-        id: clase.id || `node-${idx}`,
-        type: 'claseNode',
-        position: clase.position || { x: 100 + idx * 200, y: 100 },
-        data: { ...clase, label: clase.nombre || `Clase ${idx + 1}` }
-      }));
-
-      
-
+      const initialNodes = estructuraInicial.clases.map((clase, idx) => {
+        // Si no hay posición, asigna una por defecto y avisa por consola
+        if (!clase.position) {
+          console.warn(`Clase sin posición encontrada (idx=${idx}, nombre=${clase.nombre}). Asignando posición por defecto.`);
+        }
+        return {
+          id: clase.id || `node-${idx}`,
+          type: 'claseNode',
+          position: clase.position || { x: 100 + idx * 200, y: 100 },
+          data: { ...clase, label: clase.nombre || `Clase ${idx + 1}` }
+        };
+      });
+      console.log('Inicializando nodos (con posición):', initialNodes); // DEPURACIÓN
       setNodes(initialNodes);
 
       // Agrega un edge de prueba para visualizar una relación
@@ -63,7 +67,7 @@ export const useEditorState = (estructuraInicial) => {
           },
         }));
 
-      
+
 
       setEdges(initialEdges);
     }
@@ -84,7 +88,7 @@ export const useEditorState = (estructuraInicial) => {
   // Agrega un efecto para depurar cambios en los nodos
   useEffect(() => {
     // Log para depuración: nodos actualizados
-  
+
   }, [nodes]);
 
   useEffect(() => {

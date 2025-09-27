@@ -44,7 +44,7 @@ export const apiClient = {
     const options = { method, headers };
     if (data) options.body = JSON.stringify(data);
 
-    console.log('DEBUG: Enviando token en la solicitud:', headers['Authorization']);
+   
 
     try {
       let resp = await fetch(fullUrl, options);

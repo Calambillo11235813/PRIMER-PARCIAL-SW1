@@ -29,7 +29,11 @@ export const useDiagramPersistence = (editorState, history, projectId = null, di
    * Serializar estructura actual del diagrama
    */
   const serializarDiagramaActual = useCallback((nodesSnapshot = null, edgesSnapshot = null) => {
-    return serializarEstructura(nodesSnapshot || nodes, edgesSnapshot || edges);
+    const nodos = nodesSnapshot || nodes;
+    const relaciones = edgesSnapshot || edges;
+    const estructura = serializarEstructura(nodos, relaciones);
+    console.log('Serializando estructura:', estructura);
+    return estructura;
   }, [nodes, edges]);
 
   /**
@@ -148,10 +152,13 @@ export const useDiagramPersistence = (editorState, history, projectId = null, di
   const persistirRelaciones = async (relaciones) => {
     try {
       // Obtén las clases actuales del diagrama
-      const clases = nodes.map(nodo => nodo.data);
+      const clases = nodes.map(nodo => ({
+        ...nodo.data,
+        position: nodo.position
+      }));
 
       // Construye la estructura completa
-      const estructura = { clases, relaciones };
+      const estructura = serializarEstructura(nodes, relaciones);
 
       // Usa el endpoint estándar para actualizar el diagrama
       await actualizarDiagrama(diagramaId, { estructura });
