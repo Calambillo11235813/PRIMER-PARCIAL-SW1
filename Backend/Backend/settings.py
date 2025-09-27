@@ -30,7 +30,7 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'unsafe-default-secret')
 
 # DEBUG should be False in production; control via environment
-DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() in ('1', 'true', 'yes')
+DEBUG = True 
 
 # Hosts & CORS from environment (comma-separated)
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
@@ -46,6 +46,7 @@ CSRF_TRUSTED_ORIGINS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -58,6 +59,8 @@ INSTALLED_APPS = [
     'proyecto',
     'rest_framework',
     'rest_framework_simplejwt',
+    'colaboracion_tiempo_real',
+     
 ]
 
 MIDDLEWARE = [
@@ -95,11 +98,8 @@ WSGI_APPLICATION = 'Backend.wsgi.application'
 ASGI_APPLICATION = os.getenv('ASGI_APPLICATION', 'Backend.asgi.application')
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [os.getenv("REDIS_URL", "redis://redis:6379/0")],
-        },
-    },
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
 }
 
 
