@@ -22,10 +22,11 @@ def obtener_token_jwt():
 def obtener_diagrama_existente():
     """Obtiene el ID de un diagrama existente."""
     try:
-        # Obtener lista de diagramas
+        # Obtener lista de diagramas (usar endpoint API correcto)
         token = obtener_token_jwt()
-        headers = {"Authorization": f"Bearer {token}"}
-        response = requests.get("http://localhost:8000/diagramas/", headers=headers)
+        headers = {"Authorization": f"Bearer {token}"}  # se usa solo para la petición REST
+        # <- CAMBIO: usar la ruta /api/diagramas/
+        response = requests.get("http://localhost:8000/api/diagramas/", headers=headers)
         
         if response.status_code == 200:
             diagramas = response.json()
@@ -39,28 +40,39 @@ class ClienteColaboracion:
     def __init__(self, nombre):
         self.nombre = nombre
         self.token = obtener_token_jwt()
+        if not self.token:
+            print(f"❌ {self.nombre}: no se obtuvo token JWT. Verifica credenciales y servidor.")
         self.ws = None
         self.diagrama_id = obtener_diagrama_existente()
         
     def conectar(self):
         """Conecta al WebSocket del diagrama existente."""
+        if not self.token:
+            print(f"⛔ {self.nombre}: abortando conexión por falta de token.")
+            return
+
         ws_url = f"ws://localhost:8000/ws/diagrama/{self.diagrama_id}/"
-        headers = {"Authorization": f"Bearer {self.token}"}
-        
-        print(f"🔗 {self.nombre} conectando a diagrama {self.diagrama_id}")
-        
-        self.ws = websocket.WebSocketApp(
-            ws_url,
-            header=headers,
-            on_message=self.on_message,
-            on_error=self.on_error,
-            on_open=self.on_open,
-            on_close=self.on_close
-        )
-        
-        self.thread = threading.Thread(target=self.ws.run_forever)
-        self.thread.daemon = True
-        self.thread.start()
+        # Enviar solo Authorization como lista de strings para evitar Origin malformado
+        header_list = [f"Authorization: Bearer {self.token}"]
+
+        print(f"🔗 {self.nombre} conectando a diagrama {self.diagrama_id} (handshake...)")
+        try:
+            # Intento SIN Origin (evita errores de handshake por Origin malformado)
+            self.ws = websocket.WebSocketApp(
+                ws_url,
+                header=header_list,
+                on_message=self.on_message,
+                on_error=self.on_error,
+                on_open=self.on_open,
+                on_close=self.on_close
+            )
+            self.thread = threading.Thread(target=self.ws.run_forever)
+            self.thread.daemon = True
+            self.thread.start()
+            # esperar breve tiempo para detectar handshake error
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"❌ {self.nombre}: fallo al iniciar WebSocket: {e}")
     
     def on_message(self, ws, message):
         data = json.loads(message)
@@ -79,8 +91,9 @@ class ClienteColaboracion:
     def on_open(self, ws):
         print(f"✅ {self.nombre} conectado al diagrama {self.diagrama_id}")
         
+        # usar el ws que recibe el callback para enviar mensajes inmediatos
         time.sleep(1)
-        self.enviar_sincronizacion()
+        ws.send(json.dumps({"tipo": "sincronizar_estado"}))
         threading.Timer(3, self.simular_cambios).start()
     
     def on_close(self, ws, close_status_code, close_msg):

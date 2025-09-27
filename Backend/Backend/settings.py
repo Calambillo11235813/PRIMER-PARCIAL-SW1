@@ -32,15 +32,15 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'unsafe-default-secret')
 # DEBUG should be False in production; control via environment
 DEBUG = True 
 
-# Hosts & CORS from environment (comma-separated)
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-]
+# Hosts & CORS from environment (comma-separated) — normalizar y sanitizar
+ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
+
+# CORS / CSRF: leer desde .env y sanear entradas
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
+CORS_ALLOWED_ORIGINS = [u.strip() for u in CORS_ALLOWED_ORIGINS if u.strip()]
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-]
+
+CSRF_TRUSTED_ORIGINS = [u.strip() for u in os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:5173').split(',') if u.strip()]
 
 
 # Application definition
@@ -96,11 +96,25 @@ TEMPLATES = [
 WSGI_APPLICATION = 'Backend.wsgi.application'
 # ASGI / Channels (activar si se usa Django Channels)
 ASGI_APPLICATION = os.getenv('ASGI_APPLICATION', 'Backend.asgi.application')
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer"
+
+# Use Redis Channel Layer if REDIS_URL is provided (recommended for production/multi-worker)
+REDIS_URL = os.getenv('REDIS_URL', None)
+if REDIS_URL:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [REDIS_URL],
+            },
+        },
     }
-}
+else:
+    # Development fallback (single-process)
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer"
+        }
+    }
 
 
 # Database
@@ -119,6 +133,12 @@ DATABASES = {
         'PORT': os.getenv('POSTGRES_PORT') or os.getenv('DB_PORT') or '5433',
     }
 }
+
+# Permitir override del puerto de la BD vía .env (mantener compatibilidad)
+# (asume que DATABASES ya está definido más abajo)
+DB_PORT_ENV = os.getenv('POSTGRES_PORT') or os.getenv('DB_PORT') or os.getenv('DATABASE_PORT')
+if DB_PORT_ENV and 'DATABASES' in globals() and 'default' in DATABASES:
+    DATABASES['default']['PORT'] = DB_PORT_ENV
 
 
 # Password validation
@@ -207,4 +227,22 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": True,                 # Opcional: lista negra tras rotación
     "AUTH_HEADER_TYPES": ("Bearer",),
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+}
+
+# REST framework: restringir por defecto en entornos no-dev
+# (evita AllowAny en staging/production)
+REST_FRAMEWORK = globals().get('REST_FRAMEWORK', {})
+if not globals().get('DEBUG', True):
+    REST_FRAMEWORK['DEFAULT_PERMISSION_CLASSES'] = ['rest_framework.permissions.IsAuthenticated']
+# ensure REST_FRAMEWORK is set back into globals
+globals()['REST_FRAMEWORK'] = REST_FRAMEWORK
+
+# Logging básico (añadir más según necesidades)
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "root": {"handlers": ["console"], "level": os.getenv("DJANGO_LOG_LEVEL", "INFO")},
 }

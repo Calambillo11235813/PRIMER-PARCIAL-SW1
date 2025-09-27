@@ -126,39 +126,48 @@ class DiagramaConsumer(AsyncWebsocketConsumer):
             await self.enviar_error('Error interno del servidor')
 
     async def procesar_cambio_diagrama(self, data):
-        """
-        Valida y aplica un cambio recibido desde un cliente.
-        Envía confirmación al emisor con cambio_id y propaga el cambio al grupo.
-        """
+        # Validar payload mínimo
         cambio = data.get('cambio')
         if not cambio:
-            await self.enviar_error("Payload inválido: falta campo 'cambio'")
+            await self.send(text_data=json.dumps({"tipo": "error", "mensaje": "Payload inválido: falta campo 'cambio'"}))
             return
 
-        usuario = getattr(self.scope, "user", None)
+        # Obtener usuario autenticado desde el scope
+        usuario = self.scope.get("user", None)
+        logger.debug(f"Procesando cambio: usuario={usuario} diagrama={self.diagrama_id} payload={cambio}")
+
+        # Requerir usuario autenticado
         if usuario is None or getattr(usuario, "is_anonymous", True):
-            await self.enviar_error("No autorizado para realizar cambios")
+            await self.send(text_data=json.dumps({"tipo": "error", "mensaje": "No autorizado para realizar cambios"}))
+            return
+
+        # Verificar permisos/accseso al diagrama
+        try:
+            tiene_acceso = await verificar_acceso_diagrama(self.diagrama_id, usuario)
+        except Exception as e:
+            logger.exception("Error verificando acceso al diagrama")
+            await self.send(text_data=json.dumps({"tipo": "error", "mensaje": "Error interno verificando permisos"}))
+            return
+
+        if not tiene_acceso:
+            await self.send(text_data=json.dumps({"tipo": "error", "mensaje": "No autorizado para realizar cambios en este diagrama"}))
             return
 
         # Aplicar cambio en BD
         aplicado = await aplicar_cambio_diagrama(self.diagrama_id, cambio, usuario)
         if not aplicado:
-            await self.enviar_error("No se pudo aplicar el cambio al diagrama")
+            await self.send(text_data=json.dumps({"tipo": "error", "mensaje": "No se pudo aplicar el cambio al diagrama"}))
             return
 
         # Registrar cambio y obtener id
-        cambio_obj = await registrar_cambio_diagrama(self.diagrama_id, cambio, usuario)
-        cambio_id = getattr(cambio_obj, "id", None)
+        cambio_id = await registrar_cambio_diagrama(self.diagrama_id, cambio, usuario)
 
-        # Confirmar solo al emisor
-        await self.send(text_data=json.dumps({
-            "tipo": "cambio_confirmado",
-            "cambio_id": cambio_id
-        }))
+        # Confirmar al emisor
+        await self.send(text_data=json.dumps({"tipo": "cambio_confirmado", "cambio_id": cambio_id}))
 
-        # Propagar a grupo para que otros clientes apliquen/vean el cambio
+        # Propagar a grupo para otros clientes (usar nombre de grupo consistente)
         await self.channel_layer.group_send(
-            self.room_group_name,
+            self.grupo_diagrama,
             {
                 "type": "propagar_cambio_diagrama",
                 "usuario_id": usuario.id,
@@ -220,13 +229,19 @@ class DiagramaConsumer(AsyncWebsocketConsumer):
         """
         Propaga un cambio a todos los usuarios excepto al remitente.
         """
-        # Evento enviado desde procesar_cambio_diagrama -> reenviar a clientes
-        await self.send(text_data=json.dumps({
-            "tipo": "cambio_recibido",
-            "usuario_nombre": event.get("usuario_nombre"),
-            "cambio": event.get("cambio"),
-            "cambio_id": event.get("cambio_id")
-        }))
+        # Evitar enviar el cambio de vuelta al remitente
+        try:
+            if event.get("usuario_id") == getattr(self.usuario, "id", None):
+                return
+
+            await self.send(text_data=json.dumps({
+                "tipo": "cambio_recibido",
+                "usuario_nombre": event.get("usuario_nombre"),
+                "cambio": event.get("cambio"),
+                "cambio_id": event.get("cambio_id")
+            }))
+        except Exception as e:
+            logger.exception(f"Error propagando cambio: {e}")
 
     async def notificar_usuario_conectado(self, event):
         """

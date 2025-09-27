@@ -143,21 +143,16 @@ def aplicar_cambio_diagrama(diagrama_id, cambio, usuario):
 def registrar_cambio_diagrama(diagrama_id, cambio, usuario):
     """
     Registra un cambio en el diagrama en la base de datos.
+    Devuelve el id del cambio registrado (int) o None en fallo.
     """
     try:
-        # VERIFICAR: ¿Tu modelo usa 'diagrama' o 'diagrama_id'?
-        # Opción 1: Si el campo se llama 'diagrama'
+        # Obtener o crear sesión (usar diagrama_id o diagrama según su modelo)
+        # Usamos la opción segura con objeto DiagramaClase
+        diagrama = DiagramaClase.objects.get(id=diagrama_id)
         sesion, creada = SesionColaborativa.objects.get_or_create(
-            diagrama_id=diagrama_id,  # ← Cambiar a 'diagrama' si es necesario
+            diagrama=diagrama,
             defaults={'activa': True}
         )
-        
-        # Opción alternativa más segura:
-        # diagrama = DiagramaClase.objects.get(id=diagrama_id)
-        # sesion, creada = SesionColaborativa.objects.get_or_create(
-        #     diagrama=diagrama,
-        #     defaults={'activa': True}
-        # )
         
         cambio_obj = CambioDiagrama.objects.create(
             sesion=sesion,
@@ -166,11 +161,12 @@ def registrar_cambio_diagrama(diagrama_id, cambio, usuario):
             datos_cambio=cambio
         )
         
-        print(f"📊 Cambio registrado en BD: {cambio_obj.id}")
-        return cambio_obj
+        logger.info(f"📊 Cambio registrado en BD: {cambio_obj.id}")
+        # Devolver solo el id para evitar problemas de transporte/serialización
+        return cambio_obj.id
         
     except Exception as e:
-        print(f"❌ Error registrando cambio: {e}")
+        logger.exception(f"❌ Error registrando cambio: {e}")
         return None
 
 @database_sync_to_async
