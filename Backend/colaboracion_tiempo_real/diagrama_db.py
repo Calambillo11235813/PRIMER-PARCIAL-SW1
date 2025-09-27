@@ -1,6 +1,14 @@
 from channels.db import database_sync_to_async
+from django.db import transaction
+from django.utils import timezone  # ← AGREGAR ESTA LÍNEA
+import logging
+
 from proyecto.models import DiagramaClase
 from .models import SesionColaborativa, ConexionUsuario, CambioDiagrama
+
+
+logger = logging.getLogger(__name__)
+
 
 @database_sync_to_async
 def verificar_acceso_diagrama(diagrama_id, usuario):
@@ -86,26 +94,49 @@ def aplicar_cambio_diagrama(diagrama_id, cambio, usuario):
     Aplica un cambio al diagrama en la base de datos.
     """
     try:
-        diagrama = DiagramaClase.objects.get(id=diagrama_id)
+        logger.info(f"🔧 Aplicando cambio al diagrama {diagrama_id}: {cambio.get('tipo')}")
         
-        # Inicializar estructura si no existe
-        if not diagrama.estructura:
-            diagrama.estructura = {'nodos': [], 'relaciones': []}
-        
-        # Simular aplicación del cambio (implementar lógica real después)
-        print(f"📝 Aplicando cambio al diagrama {diagrama_id}: {cambio.get('tipo')}")
-        
-        # Por ahora, simplemente marcamos la estructura como modificada
-        diagrama.estructura['ultima_modificacion'] = str(timezone.now())
-        
-        diagrama.save()
-        return True
-        
+        # Import defensivo/local para evitar NameError si hay diferencias de carga
+        from django.utils import timezone as _timezone
+
+        with transaction.atomic():
+            diagrama = DiagramaClase.objects.get(id=diagrama_id)
+            
+            # Inicializar estructura si no existe
+            if not diagrama.estructura:
+                diagrama.estructura = {'nodos': [], 'relaciones': []}
+            
+            # Aplicar cambio según el tipo
+            tipo_cambio = cambio.get('tipo')
+            datos = cambio.get('datos', {})
+            
+            if tipo_cambio == 'crear_nodo':
+                if 'nodos' not in diagrama.estructura:
+                    diagrama.estructura['nodos'] = []
+                
+                # Verificar que el nodo no exista ya
+                nodo_existente = next((n for n in diagrama.estructura['nodos'] if n.get('id') == datos.get('id')), None)
+                if not nodo_existente:
+                    diagrama.estructura['nodos'].append(datos)
+                    logger.info(f"✅ Nodo creado: {datos.get('id')}")
+                else:
+                    logger.warning(f"⚠️  Nodo ya existe: {datos.get('id')}")
+            
+            # ... otros casos ...
+
+            # Actualizar timestamp
+            diagrama.estructura['ultima_modificacion'] = _timezone.now().isoformat()
+            diagrama.fecha_actualizacion = _timezone.now()
+            
+            diagrama.save()
+            logger.info(f"✅ Diagrama {diagrama_id} guardado exitosamente")
+            return True
+            
     except DiagramaClase.DoesNotExist:
-        print(f"❌ Diagrama {diagrama_id} no existe")
+        logger.warning(f"Diagrama {diagrama_id} no existe")
         return False
     except Exception as e:
-        print(f"❌ Error aplicando cambio: {e}")
+        logger.exception(f"Error aplicando cambio al diagrama {diagrama_id}: {e}")
         return False
 
 @database_sync_to_async
@@ -114,10 +145,19 @@ def registrar_cambio_diagrama(diagrama_id, cambio, usuario):
     Registra un cambio en el diagrama en la base de datos.
     """
     try:
+        # VERIFICAR: ¿Tu modelo usa 'diagrama' o 'diagrama_id'?
+        # Opción 1: Si el campo se llama 'diagrama'
         sesion, creada = SesionColaborativa.objects.get_or_create(
-            diagrama_id=diagrama_id,
+            diagrama_id=diagrama_id,  # ← Cambiar a 'diagrama' si es necesario
             defaults={'activa': True}
         )
+        
+        # Opción alternativa más segura:
+        # diagrama = DiagramaClase.objects.get(id=diagrama_id)
+        # sesion, creada = SesionColaborativa.objects.get_or_create(
+        #     diagrama=diagrama,
+        #     defaults={'activa': True}
+        # )
         
         cambio_obj = CambioDiagrama.objects.create(
             sesion=sesion,
@@ -125,7 +165,8 @@ def registrar_cambio_diagrama(diagrama_id, cambio, usuario):
             tipo_cambio=cambio.get('tipo', 'actualizar_nodo'),
             datos_cambio=cambio
         )
-        print(f"📊 Cambio registrado: {cambio_obj.id}")
+        
+        print(f"📊 Cambio registrado en BD: {cambio_obj.id}")
         return cambio_obj
         
     except Exception as e:

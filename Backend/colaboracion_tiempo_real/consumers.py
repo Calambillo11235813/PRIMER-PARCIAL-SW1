@@ -127,48 +127,46 @@ class DiagramaConsumer(AsyncWebsocketConsumer):
 
     async def procesar_cambio_diagrama(self, data):
         """
-        Procesa un cambio en el diagrama y lo propaga a otros usuarios.
+        Valida y aplica un cambio recibido desde un cliente.
+        Envía confirmación al emisor con cambio_id y propaga el cambio al grupo.
         """
-        try:
-            cambio = data.get('cambio', {})
-            
-            # Validar cambio básico
-            if not cambio.get('tipo') or not cambio.get('datos'):
-                await self.enviar_error('Estructura de cambio inválida')
-                return
+        cambio = data.get('cambio')
+        if not cambio:
+            await self.enviar_error("Payload inválido: falta campo 'cambio'")
+            return
 
-            # Aplicar cambio al diagrama en base de datos
-            exito = await aplicar_cambio_diagrama(self.diagrama_id, cambio, self.usuario)
-            
-            if not exito:
-                await self.enviar_error('No se pudo aplicar el cambio al diagrama')
-                return
+        usuario = getattr(self.scope, "user", None)
+        if usuario is None or getattr(usuario, "is_anonymous", True):
+            await self.enviar_error("No autorizado para realizar cambios")
+            return
 
-            # Registrar cambio en la base de datos para historial
-            cambio_registrado = await registrar_cambio_diagrama(self.diagrama_id, cambio, self.usuario)
-            
-            # Broadcast del cambio a todos los usuarios del grupo (excepto al remitente)
-            await self.channel_layer.group_send(
-                self.grupo_diagrama,
-                {
-                    'type': 'propagar_cambio_diagrama',
-                    'cambio': cambio,
-                    'usuario_id': self.usuario.id,
-                    'usuario_nombre': f"{self.usuario.nombre} {self.usuario.apellido}",
-                    'timestamp': cambio_registrado.timestamp.isoformat() if cambio_registrado else None
-                }
-            )
+        # Aplicar cambio en BD
+        aplicado = await aplicar_cambio_diagrama(self.diagrama_id, cambio, usuario)
+        if not aplicado:
+            await self.enviar_error("No se pudo aplicar el cambio al diagrama")
+            return
 
-            # Confirmar al remitente que el cambio fue aplicado
-            await self.send(text_data=json.dumps({
-                'tipo': 'cambio_confirmado',
-                'cambio_id': cambio.get('id'),
-                'timestamp': cambio_registrado.timestamp.isoformat() if cambio_registrado else None
-            }))
+        # Registrar cambio y obtener id
+        cambio_obj = await registrar_cambio_diagrama(self.diagrama_id, cambio, usuario)
+        cambio_id = getattr(cambio_obj, "id", None)
 
-        except Exception as e:
-            logger.error(f"Error procesando cambio de diagrama: {e}")
-            await self.enviar_error('Error procesando cambio')
+        # Confirmar solo al emisor
+        await self.send(text_data=json.dumps({
+            "tipo": "cambio_confirmado",
+            "cambio_id": cambio_id
+        }))
+
+        # Propagar a grupo para que otros clientes apliquen/vean el cambio
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                "type": "propagar_cambio_diagrama",
+                "usuario_id": usuario.id,
+                "usuario_nombre": getattr(usuario, "nombre", str(usuario)),
+                "cambio": cambio,
+                "cambio_id": cambio_id
+            }
+        )
 
     async def procesar_usuario_editando(self, data):
         """
@@ -222,15 +220,13 @@ class DiagramaConsumer(AsyncWebsocketConsumer):
         """
         Propaga un cambio a todos los usuarios excepto al remitente.
         """
-        # Solo enviar a otros usuarios (no al que originó el cambio)
-        if event['usuario_id'] != self.usuario.id:
-            await self.send(text_data=json.dumps({
-                'tipo': 'cambio_recibido',
-                'cambio': event['cambio'],
-                'usuario_id': event['usuario_id'],
-                'usuario_nombre': event['usuario_nombre'],
-                'timestamp': event['timestamp']
-            }))
+        # Evento enviado desde procesar_cambio_diagrama -> reenviar a clientes
+        await self.send(text_data=json.dumps({
+            "tipo": "cambio_recibido",
+            "usuario_nombre": event.get("usuario_nombre"),
+            "cambio": event.get("cambio"),
+            "cambio_id": event.get("cambio_id")
+        }))
 
     async def notificar_usuario_conectado(self, event):
         """
@@ -275,7 +271,6 @@ class DiagramaConsumer(AsyncWebsocketConsumer):
     async def enviar_error(self, mensaje):
         """Envía un mensaje de error al cliente."""
         await self.send(text_data=json.dumps({
-            'tipo': 'error',
-            'mensaje': mensaje,
-            'timestamp': await obtener_timestamp_actual()
+            "tipo": "error",
+            "mensaje": mensaje
         }))
