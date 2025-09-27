@@ -3,8 +3,22 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 /**
  * Hook personalizado para manejar WebSockets de colaboración en tiempo real
  * Gestiona conexiones, reconexión automática y sincronización de cambios
+ *
+ * Firma flexible:
+ *  - useWebSocket(diagramaId)
+ *  - useWebSocket({ diagramaId, token })
  */
-export const useWebSocket = (diagramaId) => {
+export const useWebSocket = (diagramaIdOrOptions) => {
+    // aceptar llamada flexible: número o { diagramaId, token }
+    let diagramaId;
+    let tokenArg;
+    if (typeof diagramaIdOrOptions === 'object' && diagramaIdOrOptions !== null) {
+        diagramaId = diagramaIdOrOptions.diagramaId;
+        tokenArg = diagramaIdOrOptions.token;
+    } else {
+        diagramaId = diagramaIdOrOptions;
+    }
+
     const [estaConectado, setEstaConectado] = useState(false);
     const [usuariosConectados, setUsuariosConectados] = useState([]);
     const [ultimoCambio, setUltimoCambio] = useState(null);
@@ -21,7 +35,13 @@ export const useWebSocket = (diagramaId) => {
      */
     const conectar = useCallback(() => {
         try {
-            const token = localStorage.getItem('access_token');
+            // resolver token: preferir argumento, luego múltiples claves comunes
+            const token = tokenArg
+                || (typeof window !== 'undefined' && localStorage.getItem('access_token'))
+                || (typeof window !== 'undefined' && localStorage.getItem('access'))
+                || (typeof window !== 'undefined' && localStorage.getItem('token'))
+                || (typeof window !== 'undefined' && localStorage.getItem('jwt'));
+
             if (!token) {
                 console.error('❌ No hay token JWT disponible');
                 return;
@@ -32,7 +52,8 @@ export const useWebSocket = (diagramaId) => {
                 clearTimeout(reconnectTimeout.current);
             }
 
-            const url = `ws://localhost:8000/ws/diagrama/${diagramaId}/`;
+            // incluir token en querystring para handshake (navegadores no permiten header Authorization en handshake)
+            const url = `ws://localhost:8000/ws/diagrama/${diagramaId}/${token ? `?token=${encodeURIComponent(token)}` : ''}`;
             ws.current = new WebSocket(url);
 
             ws.current.onopen = () => {
@@ -40,11 +61,15 @@ export const useWebSocket = (diagramaId) => {
                 setEstaConectado(true);
                 reconnectAttempts.current = 0;
                 
-                // Autenticar después de conectar
-                ws.current.send(JSON.stringify({
-                    tipo: 'autenticar',
-                    token: token
-                }));
+                // opcional: seguir enviando mensaje de autenticación si el servidor lo espera
+                try {
+                    ws.current.send(JSON.stringify({
+                        tipo: 'autenticar',
+                        token: token
+                    }));
+                } catch (e) {
+                    // ignorar si no es necesario
+                }
             };
 
             ws.current.onmessage = (event) => {
@@ -85,7 +110,7 @@ export const useWebSocket = (diagramaId) => {
             console.error('❌ Error conectando WebSocket:', error);
             agregarError('conexion', 'Error al conectar con el servidor');
         }
-    }, [diagramaId]);
+    }, [diagramaId, tokenArg]);
 
     /**
      * Agrega error al estado con límite de errores
