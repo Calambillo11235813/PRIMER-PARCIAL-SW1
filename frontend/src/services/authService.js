@@ -1,4 +1,4 @@
-import { API_ENDPOINTS, apiClient, setToken, setRefreshToken, removeToken } from './apiConfig';
+import { API_ENDPOINTS, apiClient, setAccessToken, setRefreshToken, removeToken, removeRefreshToken } from './apiConfig';
 
 /**
  * Iniciar sesión con JWT
@@ -14,8 +14,8 @@ export const login = async (correo, password) => {
     });
 
     if (resp?.data?.access) {
-      setToken(resp.data.access); // Guardar el access token
-      setRefreshToken(resp.data.refresh); // Guardar el refresh token
+      setAccessToken(resp.data.access); // guarda en access_token
+      setRefreshToken(resp.data.refresh); // guarda en refresh_token
       return resp.data;
     } else {
       throw new Error('No se recibió un token de acceso válido.');
@@ -37,6 +37,9 @@ export const login = async (correo, password) => {
  */
 export const logout = async () => {
   removeToken();
+  removeRefreshToken();
+  // redirigir al login si no estás ya ahí
+  if (window.location.pathname !== '/login') window.location.href = '/login';
   return true;
 };
 

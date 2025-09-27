@@ -5,6 +5,17 @@ import ActualizarProyecto from './ActualizarProyecto';
 import EliminarProyecto from './EliminarProyecto';
 import CrearProyecto from './CrearProyecto';
 
+function parseJwt(token) {
+  try {
+    const payload = token.split('.')[1];
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
 const ListaProyectos = () => {
   const [proyectos, setProyectos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -13,12 +24,34 @@ const ListaProyectos = () => {
 
   const cargarProyectos = async () => {
     setCargando(true);
-    const resp = await proyectoService.obtenerProyectos();
+    // intentar obtener userId desde token en localStorage (claves comunes)
+    const token = localStorage.getItem('access') || localStorage.getItem('access_token') || localStorage.getItem('token');
+    console.log('ListaProyectos:cargarProyectos token=', token);
+    let userId = null;
+    if (token) {
+      const payload = parseJwt(token);
+      console.log('ListaProyectos: token payload=', payload);
+      // comprobar claves comunes en payload
+      userId = payload?.user_id || payload?.id || payload?.sub || null;
+    }
+    console.log('ListaProyectos: resolved userId=', userId);
+
+    // Mostrar la URL que se solicitará (útil para confirmar que llama al endpoint correcto)
+    try {
+      const apiUrl = userId ? `/api/proyectos/usuario/${userId}/` : '/api/proyectos/';
+      console.log('ListaProyectos: llamando a URL =', apiUrl);
+    } catch (e) {
+      console.log('ListaProyectos: error construyendo URL', e);
+    }
+
+    const resp = await proyectoService.obtenerProyectos(userId);
+    console.log('ListaProyectos: respuesta obtenerProyectos =>', resp && resp.data ? { status: resp.status, length: (resp.data || []).length } : resp);
     setProyectos(resp.data || []);
     setCargando(false);
   };
 
   useEffect(() => {
+    console.log('ListaProyectos: useEffect monta -> idUsuario localStorage?', localStorage.getItem('access') || localStorage.getItem('access_token') || localStorage.getItem('token'));
     cargarProyectos();
   }, []);
 

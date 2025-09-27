@@ -34,21 +34,20 @@ test('useWebSocket crea conexión y puede enviar mensajes', async () => {
   const diagramaId = 4;
   const storeRef = { current: null };
 
-  // many hooks read JWT from localStorage; aseguramos su existencia para la prueba
-  // usar la clave que el hook ahora acepta ('access_token' preferida)
-  localStorage.setItem('access_token', token);
-
-  render(<HookWrapper diagramaId={diagramaId} token={token} storeRef={storeRef} />);
-
-  // esperar apertura simulada
-  await new Promise((r) => setTimeout(r, 20));
+  // envolver render y la espera del onopen dentro de act(async) para evitar la advertencia
+  await act(async () => {
+    localStorage.setItem('access_token', token);
+    render(<HookWrapper diagramaId={diagramaId} token={token} storeRef={storeRef} />);
+    // esperar la apertura simulada del MockWebSocket
+    await new Promise((r) => setTimeout(r, 20));
+  });
 
   expect(MockWebSocket.instances.length).toBe(1);
   const created = MockWebSocket.instances[0];
   expect(created.url).toContain(`/ws/diagrama/${diagramaId}`);
 
   if (storeRef.current && typeof storeRef.current.sendMessage === 'function') {
-    act(() => { storeRef.current.sendMessage({ tipo: 'ping' }); });
+    await act(async () => { storeRef.current.sendMessage({ tipo: 'ping' }); });
     expect(created.sent.length).toBeGreaterThanOrEqual(1);
   }
 

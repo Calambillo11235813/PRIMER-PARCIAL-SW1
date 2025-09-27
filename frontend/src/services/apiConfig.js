@@ -5,27 +5,32 @@
 export const API_URL = 'http://127.0.0.1:8000';
 export const API_ENDPOINTS = {
   USUARIO: '/api/usuarios/',
-  LOGIN: '/api/token/',           // JWT login endpoint
-  REFRESH: '/api/token/refresh/', // JWT refresh endpoint
+  LOGIN: '/api/token/',
+  REFRESH: '/api/token/refresh/',
   PROYECTOS: '/api/proyectos/',
-  DIAGRAMAS: '/api/diagramas/', // <-- Agregado endpoint de diagramas
+  DIAGRAMAS: '/api/diagramas/',
   USER_ME: '/api/me/',
 };
 
-export function setToken(token) { localStorage.setItem('jwt', token); } // compat
-export function setAccessToken(token) { localStorage.setItem('jwt', token); }
-export function setRefreshToken(token) { localStorage.setItem('refresh', token); }
-export function getToken() { return localStorage.getItem('jwt'); }
-export function getRefreshToken() { return localStorage.getItem('refresh'); }
-export function removeToken() { localStorage.removeItem('jwt'); }
-export function removeRefreshToken() { localStorage.removeItem('refresh'); }
+// Storage keys: unificadas
+const ACCESS_KEY = 'access_token';
+const REFRESH_KEY = 'refresh_token';
 
+export function setAccessToken(token) { localStorage.setItem(ACCESS_KEY, token); }
+export function setRefreshToken(token) { localStorage.setItem(REFRESH_KEY, token); }
+export function getToken() { return localStorage.getItem(ACCESS_KEY); }
+export function getRefreshToken() { return localStorage.getItem(REFRESH_KEY); }
+export function removeToken() { localStorage.removeItem(ACCESS_KEY); }
+export function removeRefreshToken() { localStorage.removeItem(REFRESH_KEY); }
+
+// Compatibilidad: alias histórico setToken -> setAccessToken
+export function setToken(token) { return setAccessToken(token); }
+// Si alguien usaba también removeToken como nombre distinto, ya existe removeToken arriba.
+
+// apiClient (sin cambios de firma) pero usa getToken/getRefreshToken anteriores
 export const apiClient = {
-  // Firma original: request(method, url, data)
   async request(method, url, data = null, _retry = false) {
     const fullUrl = API_URL + url;
-
-    // No exigir token para login o refresh
     const skipAuth = url.includes(API_ENDPOINTS.LOGIN) || url.includes(API_ENDPOINTS.REFRESH);
     if (!skipAuth) {
       const token = getToken();
@@ -44,22 +49,16 @@ export const apiClient = {
     const options = { method, headers };
     if (data) options.body = JSON.stringify(data);
 
-   
-
     try {
       let resp = await fetch(fullUrl, options);
       const text = await resp.text();
       const json = text ? JSON.parse(text) : null;
 
       if (!resp.ok) {
-        console.error(`apiClient: Error en ${method} ${fullUrl}:`, json);
-
-        // Si el token no es válido, intentar refresh una vez
-        const tokenInvalid = json && (json.code === 'token_not_valid' || json.detail && json.detail.toString().toLowerCase().includes('token_not_valid'));
+        const tokenInvalid = json && (json.code === 'token_not_valid' || (json.detail && json.detail.toString().toLowerCase().includes('token_not_valid')));
         if (resp.status === 401 && tokenInvalid && !_retry) {
           const refresh = getRefreshToken();
           if (refresh) {
-            // intentar refresh
             const refreshRes = await fetch(API_URL + API_ENDPOINTS.REFRESH, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -68,13 +67,11 @@ export const apiClient = {
             const refreshText = await refreshRes.text();
             const refreshJson = refreshText ? JSON.parse(refreshText) : null;
             if (refreshRes.ok && refreshJson.access) {
-              // guardar nuevo access y reintentar petición original
+              // guardar nuevo access y reintentar
               setAccessToken(refreshJson.access);
-              // opcional: si vienen nuevos tokens, guarda refresh también
               if (refreshJson.refresh) setRefreshToken(refreshJson.refresh);
               return this.request(method, url, data, true);
             } else {
-              // refresh falló: limpiar y redirigir a login
               removeToken();
               removeRefreshToken();
               if (window.location.pathname !== '/login') window.location.href = '/login';
