@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { getToken } from '../../../services/apiConfig'; // <-- usar getter centralizado de token
 
 /**
  * Hook personalizado para manejar WebSockets de colaboración en tiempo real
@@ -35,12 +36,8 @@ export const useWebSocket = (diagramaIdOrOptions) => {
      */
     const conectar = useCallback(() => {
         try {
-            // resolver token: preferir argumento, luego múltiples claves comunes
-            const token = tokenArg
-                || (typeof window !== 'undefined' && localStorage.getItem('access_token'))
-                || (typeof window !== 'undefined' && localStorage.getItem('access'))
-                || (typeof window !== 'undefined' && localStorage.getItem('token'))
-                || (typeof window !== 'undefined' && localStorage.getItem('jwt'));
+            // resolver token: preferir argumento, luego getToken() centralizado
+            const token = tokenArg || (typeof window !== 'undefined' && getToken());
 
             if (!token) {
                 console.error('❌ No hay token JWT disponible');
@@ -52,8 +49,9 @@ export const useWebSocket = (diagramaIdOrOptions) => {
                 clearTimeout(reconnectTimeout.current);
             }
 
-            // incluir token en querystring para handshake (navegadores no permiten header Authorization en handshake)
-            const url = `ws://localhost:8000/ws/diagrama/${diagramaId}/${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+            // elegir protocolo WS seguro según la página
+            const wsProtocol = (typeof window !== 'undefined' && window.location && window.location.protocol === 'https:') ? 'wss' : 'ws';
+            const url = `${wsProtocol}://localhost:8000/ws/diagrama/${diagramaId}/${token ? `?token=${encodeURIComponent(token)}` : ''}`;
             ws.current = new WebSocket(url);
 
             ws.current.onopen = () => {
@@ -63,10 +61,12 @@ export const useWebSocket = (diagramaIdOrOptions) => {
                 
                 // opcional: seguir enviando mensaje de autenticación si el servidor lo espera
                 try {
-                    ws.current.send(JSON.stringify({
-                        tipo: 'autenticar',
-                        token: token
-                    }));
+                    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+                        ws.current.send(JSON.stringify({
+                            tipo: 'autenticar',
+                            token: token
+                        }));
+                    }
                 } catch (e) {
                     // ignorar si no es necesario
                 }
@@ -185,7 +185,7 @@ export const useWebSocket = (diagramaIdOrOptions) => {
      * Envía un cambio al servidor
      */
     const enviarCambio = useCallback((cambio) => {
-        if (ws.current && estaConectado) {
+        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
             const mensaje = {
                 tipo: 'cambio_diagrama',
                 cambio: cambio,
@@ -197,31 +197,35 @@ export const useWebSocket = (diagramaIdOrOptions) => {
             console.warn('⚠️ WebSocket no conectado, cambio no enviado');
             agregarError('envio', 'No conectado. El cambio se guardará localmente.');
         }
-    }, [estaConectado, agregarError]);
+    }, [agregarError]);
 
     /**
      * Solicita sincronización del estado del diagrama
      */
     const sincronizarEstado = useCallback(() => {
-        if (ws.current && estaConectado) {
+        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
             ws.current.send(JSON.stringify({ tipo: 'sincronizar_estado' }));
             console.log('🔄 Solicitando sincronización de estado');
+        } else {
+            console.warn('⚠️ No conectado, no se solicitó sincronización');
         }
-    }, [estaConectado]);
+    }, []);
 
     /**
      * Notifica que un usuario está editando un elemento
      */
     const notificarEdicion = useCallback((elementoId, editando) => {
-        if (ws.current && estaConectado) {
+        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
             const mensaje = {
                 tipo: 'usuario_editando',
                 elemento_id: elementoId,
                 editando: editando
             };
             ws.current.send(JSON.stringify(mensaje));
+        } else {
+            // silencioso: no enviar si no hay conexión
         }
-    }, [estaConectado]);
+    }, []);
 
     /**
      * Desconecta manualmente el WebSocket

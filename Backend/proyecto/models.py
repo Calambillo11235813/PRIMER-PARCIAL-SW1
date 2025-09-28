@@ -1,5 +1,7 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
+import secrets
 
 class Proyecto(models.Model):
     nombre = models.CharField(max_length=100)
@@ -16,9 +18,8 @@ class Proyecto(models.Model):
     # NUEVO: Campo para colaboradores del proyecto
     colaboradores = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
-        related_name='proyectos_colaborados',
-        blank=True,
-        help_text="Usuarios que pueden colaborar en este proyecto"
+        related_name='proyectos_colaborando',
+        blank=True
     )
     
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -137,3 +138,41 @@ class DiagramaClase(models.Model):
             bool: True si el usuario tiene acceso al proyecto padre
         """
         return self.proyecto.usuario_tiene_acceso(usuario)
+
+# NUEVO: Modelo Invitation para gestionar invitaciones a proyectos
+class Invitation(models.Model):
+    ESTADO_PENDIENTE = 'pendiente'
+    ESTADO_ACEPTADA = 'aceptada'
+    ESTADO_RECHAZADA = 'rechazada'
+    ESTADO_CHOICES = [
+        (ESTADO_PENDIENTE, 'Pendiente'),
+        (ESTADO_ACEPTADA, 'Aceptada'),
+        (ESTADO_RECHAZADA, 'Rechazada'),
+    ]
+
+    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='invitaciones')
+    correo_electronico = models.EmailField()
+    rol = models.CharField(max_length=30, default='colaborador')  # puede extenderse
+    token = models.CharField(max_length=64, unique=True, editable=False)
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default=ESTADO_PENDIENTE)
+    creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    creado_en = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ('proyecto', 'correo_electronico')
+
+    def save(self, *args, **kwargs):
+        if not self.token:
+            self.token = secrets.token_urlsafe(24)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Invitación {self.correo_electronico} -> {self.proyecto} ({self.estado})"
+
+    def marcar_aceptada(self, usuario):
+        """
+        Marcar invitación como aceptada y añadir usuario al proyecto.
+        """
+        self.estado = self.ESTADO_ACEPTADA
+        self.save()
+        self.proyecto.colaboradores.add(usuario)
