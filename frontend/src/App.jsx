@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { getCurrentUser, logout, login } from './services/authService';
 import { apiClient, API_ENDPOINTS } from './services/apiConfig';
 import Login from './pages/Login';
@@ -12,12 +12,25 @@ import EditorDiagrama from './components/EditorVisual/EditorDiagrama';
 import ListaDiagramas from './components/Proyecto/Diagramas/ListaDiagramas';
 import EditorDiagramaPage from './pages/EditorDiagramaPage';  // Nuevo import
 
+
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mostrarPerfil, setMostrarPerfil] = useState(false);
   const [mostrarRegistro, setMostrarRegistro] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // NOTE: removed global popstate sync — navigation should be handled by router/components
+
+  
+
+  useEffect(() => {
+    console.log('App: location changed ->', location.pathname, 'state=', location.state, 'history.length=', window.history.length);
+  }, [location]);
+
+
+  
 
   useEffect(() => {
     // Si tienes CSRF en el backend, puedes eliminar esta línea con JWT puro
@@ -95,7 +108,7 @@ function App() {
       <main className="container mx-auto p-4">
         <Routes>
           <Route path="/" element={<Dashboard user={user} onIrPerfil={handleIrPerfil} />} />
-          <Route path="/login" element={<Login onLogin={handleLogin} onMostrarRegistro={() => setMostrarRegistro(true)} />} /> {/* Ruta explícita para /login */}
+          <Route path="/login" element={<Login onLogin={handleLogin} onMostrarRegistro={() => setMostrarRegistro(true)} />} />
           <Route path="/registro" element={<Registro onVolver={handleVolverLogin} />} />
           <Route path="/proyectos" element={<ListaProyectos />} />
           <Route path="/editor" element={<EditorDiagramaPage />} />

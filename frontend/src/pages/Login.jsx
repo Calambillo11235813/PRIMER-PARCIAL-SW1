@@ -5,12 +5,14 @@ const Login = ({ onLogin, onMostrarRegistro }) => {
   const [correo_electronico, setCorreo] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [recordarme, setRecordarme] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     try {
-      await onLogin(correo_electronico, password);
+      // si el parent onLogin llama internamente a authService.login aceptará el tercer parámetro
+      await onLogin(correo_electronico, password, recordarme);
     } catch (err) {
       setError(err.message); // Mostrar el mensaje de error al usuario
     }
@@ -43,6 +45,18 @@ const Login = ({ onLogin, onMostrarRegistro }) => {
               className="w-full border border-green-300 rounded-md px-4 py-2"
               required
             />
+            <div className="flex items-center">
+              <input
+                id="recordarme"
+                type="checkbox"
+                checked={recordarme}
+                onChange={e => setRecordarme(e.target.checked)}
+                className="mr-2"
+              />
+              <label htmlFor="recordarme" className="text-sm text-gray-600">
+                Mantener sesión en este navegador
+              </label>
+            </div>
             {error && <div className="text-red-600 text-center">{error}</div>}
             <button
               type="submit"

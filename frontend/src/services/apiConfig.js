@@ -16,16 +16,46 @@ export const API_ENDPOINTS = {
 const ACCESS_KEY = 'access_token';
 const REFRESH_KEY = 'refresh_token';
 
-export function setAccessToken(token) { localStorage.setItem(ACCESS_KEY, token); }
-export function setRefreshToken(token) { localStorage.setItem(REFRESH_KEY, token); }
-export function getToken() { return localStorage.getItem(ACCESS_KEY); }
-export function getRefreshToken() { return localStorage.getItem(REFRESH_KEY); }
-export function removeToken() { localStorage.removeItem(ACCESS_KEY); }
-export function removeRefreshToken() { localStorage.removeItem(REFRESH_KEY); }
+/**
+ * Guardado de tokens:
+ * - Por defecto guarda en sessionStorage (sesión por pestaña).
+ * - Si persistente=true guarda en localStorage (permanece entre pestañas).
+ */
+export function setAccessToken(token, { persistente = false } = {}) {
+  const storage = persistente ? window.localStorage : window.sessionStorage;
+  storage.setItem(ACCESS_KEY, token);
+}
+export function setRefreshToken(token, { persistente = false } = {}) {
+  const storage = persistente ? window.localStorage : window.sessionStorage;
+  storage.setItem(REFRESH_KEY, token);
+}
+
+/**
+ * Obtención de token:
+ * - Prioriza sessionStorage (sesión actual por pestaña).
+ * - Si no existe en sessionStorage, usa localStorage (persistente).
+ */
+export function getToken() {
+  return window.sessionStorage.getItem(ACCESS_KEY) || window.localStorage.getItem(ACCESS_KEY);
+}
+export function getRefreshToken() {
+  return window.sessionStorage.getItem(REFRESH_KEY) || window.localStorage.getItem(REFRESH_KEY);
+}
+
+/**
+ * Eliminación de tokens: limpiar ambos storages para asegurar logout completo.
+ */
+export function removeToken() {
+  window.sessionStorage.removeItem(ACCESS_KEY);
+  window.localStorage.removeItem(ACCESS_KEY);
+}
+export function removeRefreshToken() {
+  window.sessionStorage.removeItem(REFRESH_KEY);
+  window.localStorage.removeItem(REFRESH_KEY);
+}
 
 // Compatibilidad: alias histórico setToken -> setAccessToken
-export function setToken(token) { return setAccessToken(token); }
-// Si alguien usaba también removeToken como nombre distinto, ya existe removeToken arriba.
+export function setToken(token, opts = {}) { return setAccessToken(token, opts); }
 
 // apiClient (sin cambios de firma) pero usa getToken/getRefreshToken anteriores
 export const apiClient = {
@@ -35,11 +65,10 @@ export const apiClient = {
     if (!skipAuth) {
       const token = getToken();
       if (!token) {
-        console.error('DEBUG: No hay token disponible. Redirigiendo al inicio de sesión.');
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
-        throw new Error('No hay token disponible. Redirigiendo al inicio de sesión.');
+        console.error('DEBUG: No hay token disponible.');
+        const err = new Error('No hay token disponible.');
+        err.status = 401;
+        throw err;
       }
     }
 
@@ -74,8 +103,7 @@ export const apiClient = {
             } else {
               removeToken();
               removeRefreshToken();
-              if (window.location.pathname !== '/login') window.location.href = '/login';
-              const error = new Error('Refresh token inválido, redirigiendo a login.');
+              const error = new Error('Refresh token inválido.');
               error.status = 401;
               error.data = refreshJson;
               throw error;

@@ -1,5 +1,6 @@
 // EditorDiagrama.jsx
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useEditorState } from './hooks/useEditorState';
 import { useDiagramHistory } from './hooks/useDiagramHistory';
 import { useDiagramPersistence } from './hooks/useDiagramPersistence';
@@ -32,6 +33,8 @@ function logEditorDiagrama(...args) {
  * @returns {JSX.Element} Editor de diagramas completo
  */
 const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
   // Hooks de estado y funcionalidades
   const editorState = useEditorState(estructuraInicial);
   const history = useDiagramHistory();
@@ -136,14 +139,31 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
     console.log('Relaciones guardadas:', relaciones);
   };
 
+  // Fallback robusto para volver atrás
+  const handleVolver = () => {
+    // Intentar retroceder en historial; si no hay historial válido, navegar a lista de proyectos
+    try {
+      navigate(-1);
+      setTimeout(() => {
+        // si seguimos en editor, hacer fallback explícito
+        if (window.location.pathname.includes('/editor')) {
+          navigate('/proyectos');
+        }
+      }, 200);
+    } catch (e) {
+      window.history.back();
+      setTimeout(() => {
+        if (window.location.pathname.includes('/editor')) {
+          navigate('/proyectos');
+        }
+      }, 200);
+    }
+  };
+
   return (
     <div className="editor-diagrama-container relative" style={{ height: '100%' }}>
-      {/* Toolbar agregado aquí */}
-      <Toolbar
-        handleGuardarRelaciones={handleGuardarRelaciones}
-        onAgregarClase={() => {/* lógica para agregar clase */}}
-        onAgregarRelacion={() => {/* lógica para agregar relación */}}
-      />
+     
+ 
 
       {/* Controles del editor */}
       <DiagramControls
@@ -190,6 +210,9 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
           edgeManagement.setRelacionEditando(null);     // Cierra modal de relación
         }}
         relacionEditando={edgeManagement.relacionEditando}
+
+
+        
         onGuardarRelacion={(relacionActualizada) => {
           logEditorDiagrama('Relación actualizada:', relacionActualizada);
 

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation, Link } from 'react-router-dom';
 import { obtenerDiagramas, crearDiagrama, eliminarDiagrama } from '../../../services/diagramService';
 import EditorDiagrama from '../../EditorVisual/EditorDiagrama';
 import { actualizarDiagrama } from '../../../services/diagramService';
-import { useNavigate, useLocation } from 'react-router-dom';
 
 const ListaDiagramas = ({ idProyecto }) => {
   const location = useLocation();
@@ -17,7 +17,6 @@ const ListaDiagramas = ({ idProyecto }) => {
   });
   const [error, setError] = useState('');
   const [diagramaEditando, setDiagramaEditando] = useState(null);
-  const navigate = useNavigate();
 
   const cargarDiagramas = async () => {
     setCargando(true);
@@ -32,6 +31,10 @@ const ListaDiagramas = ({ idProyecto }) => {
     cargarDiagramas();
     // eslint-disable-next-line
   }, [effectiveProjectId]);
+
+  useEffect(() => {
+    console.log('ListaDiagramas mounted - location.pathname=', location.pathname, 'state=', location.state, 'window.history.length=', window.history.length);
+  }, [location.pathname]);
 
   const handleCrear = async (e) => {
     e.preventDefault();
@@ -92,12 +95,17 @@ const ListaDiagramas = ({ idProyecto }) => {
                     <p className="text-gray-600 text-sm">{diag.descripcion}</p>
                   </div>
                   <div className="flex gap-3">
-                    <button
+                    <Link
+                      to={`/editor/${diag.id}`}
+                      state={{ from: location.pathname, idProyecto: effectiveProjectId }}
                       className="text-yellow-700 hover:underline"
-                      onClick={() => navigate(`/editor/${diag.id}`)}
+                      onClick={() => {
+                        console.log('ListaDiagramas: editar click -> going to /editor/', diag.id, 'from=', location.pathname, 'history.length(before) =', window.history.length);
+                      }}
                     >
                       Editar
-                    </button>
+                    </Link>
+
                     <button
                       className="text-red-600 hover:underline"
                       onClick={() => handleEliminar(diag.id)}

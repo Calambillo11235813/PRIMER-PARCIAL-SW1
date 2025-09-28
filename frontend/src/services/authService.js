@@ -4,9 +4,10 @@ import { API_ENDPOINTS, apiClient, setAccessToken, setRefreshToken, removeToken,
  * Iniciar sesión con JWT
  * @param {string} correo
  * @param {string} password
+ * @param {boolean} persistente - si true guarda tokens en localStorage (permanece entre pestañas)
  * @returns {Promise<Object>} respuesta del backend (ej. {access, refresh})
  */
-export const login = async (correo, password) => {
+export const login = async (correo, password, persistente = false) => {
   try {
     const resp = await apiClient.post(API_ENDPOINTS.LOGIN, {
       correo_electronico: correo,
@@ -14,8 +15,9 @@ export const login = async (correo, password) => {
     });
 
     if (resp?.data?.access) {
-      setAccessToken(resp.data.access); // guarda en access_token
-      setRefreshToken(resp.data.refresh); // guarda en refresh_token
+      // guardar tokens; por defecto en sessionStorage, si persistente=true en localStorage
+      setAccessToken(resp.data.access, { persistente });
+      setRefreshToken(resp.data.refresh, { persistente });
       return resp.data;
     } else {
       throw new Error('No se recibió un token de acceso válido.');
@@ -38,8 +40,6 @@ export const login = async (correo, password) => {
 export const logout = async () => {
   removeToken();
   removeRefreshToken();
-  // redirigir al login si no estás ya ahí
-  if (window.location.pathname !== '/login') window.location.href = '/login';
   return true;
 };
 
