@@ -1,40 +1,50 @@
+import logging
+
 from django.shortcuts import get_object_or_404
+
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-import logging
-
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
 
 from .models import Proyecto, Invitation
 from .serializer import InvitationSerializer
 
 logger = logging.getLogger(__name__)
 
+
 def _get_user_email_normalized(user):
     """
-    Obtener email normalizado del usuario (usa get_username o campos comunes).
+    Obtener email normalizado del usuario.
+
+    Intenta user.get_username(), y como fallback busca atributos
+    comunes ('correo_electronico', 'email').
     """
     if user is None:
         return ''
+
     try:
-        val = user.get_username()
-        if val:
-            return str(val).strip().lower()
+        username = user.get_username()
+        if username:
+            return str(username).strip().lower()
     except Exception:
         pass
-    for field in ('correo_electronico', 'email'):
-        val = getattr(user, field, None)
+
+    for campo in ('correo_electronico', 'email'):
+        val = getattr(user, campo, None)
         if val:
             return str(val).strip().lower()
+
     return ''
 
-class InvitacionCrearAPIView(generics.CreateAPIView):
+
+class InvitacionCrearAPIView(generics.ListCreateAPIView):
     """
-    POST /proyectos/<pk>/invitaciones/
-    - Inyecta proyecto desde la URL; solo usuarios autorizados pueden invitar.
+    GET  /proyectos/<pk>/invitaciones/  -> listar invitaciones del proyecto
+    POST /proyectos/<pk>/invitaciones/  -> crear invitación (solo creador)
     """
     serializer_class = InvitationSerializer
     permission_classes = [IsAuthenticated]
@@ -43,19 +53,24 @@ class InvitacionCrearAPIView(generics.CreateAPIView):
         proyecto_id = self.kwargs.get('pk')
         return get_object_or_404(Proyecto, pk=proyecto_id)
 
-    def post(self, request, *args, **kwargs):
-        proyecto = self.get_proyecto()
-        # política de permisos: solo creador puede invitar (ajustable)
-        if proyecto.creador != request.user:
-            return Response({'detail': 'No tiene permiso para invitar colaboradores.'}, status=status.HTTP_403_FORBIDDEN)
+    def get_queryset(self):
+        proyecto_id = self.kwargs.get('pk')
+        return Invitation.objects.filter(proyecto_id=proyecto_id).order_by('-id')
 
-        data = request.data.copy()
-        data['proyecto'] = proyecto.id
-        serializer = self.get_serializer(data=data, context={'request': request})
+    def create(self, request, *args, **kwargs):
+        proyecto = self.get_proyecto()
+        if proyecto.creador != request.user:
+            return Response({'detail': 'No tiene permiso para invitar colaboradores.'},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        datos = request.data.copy()
+        datos['proyecto'] = proyecto.id
+        serializer = self.get_serializer(data=datos, context={'request': request})
         serializer.is_valid(raise_exception=True)
         invitacion = serializer.save()
+        invitacion.estado = 'pendiente'
+        invitacion.save(update_fields=['estado'])
 
-        # notificar por Channels si está disponible
         try:
             channel_layer = get_channel_layer()
             if channel_layer:
@@ -66,53 +81,58 @@ class InvitacionCrearAPIView(generics.CreateAPIView):
                     'correo_invitado': invitacion.correo_electronico,
                     'invitacion_id': invitacion.id,
                 }
-                async_to_sync(channel_layer.group_send)(f'proyecto_{proyecto.id}', payload)
+                async_to_sync(channel_layer.group_send)(
+                    f'proyecto_{proyecto.id}', payload
+                )
         except Exception:
             logger.exception('Error notificando por Channels al crear invitación')
 
-        return Response(InvitationSerializer(invitacion).data, status=status.HTTP_201_CREATED)
+        headers = self.get_success_headers(serializer.data)
+        return Response(InvitationSerializer(invitacion).data, status=status.HTTP_201_CREATED, headers=headers)
 
-class InvitacionListCreateAPIView(generics.ListCreateAPIView):
-    """
-    GET /proyectos/<pk>/invitaciones/  -> listar
-    POST /proyectos/<pk>/invitaciones/ -> crear (delegado a InvitacionCrearAPIView o aquí)
-    """
-    serializer_class = InvitationSerializer
-    permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        proyecto_id = self.kwargs.get('pk')
-        return Invitation.objects.filter(proyecto_id=proyecto_id).order_by('-id')
 
-    def perform_create(self, serializer):
-        proyecto = get_object_or_404(Proyecto, pk=self.kwargs.get('pk'))
-        serializer.save(proyecto=proyecto, creado_por=self.request.user)
 
 class InvitacionAceptarAPIView(APIView):
     """
-    POST /invitaciones/aceptar/  { "token": "<token>" }
+    POST /invitaciones/aceptar/
+    - Body JSON de ejemplo:
+      { "token": "OZOU5ouSHIBbxj55e7_WUphy3tuyxPkl" }
+
+    - Respuesta (200 OK) de ejemplo:
+      { "detail": "Invitación aceptada.", "proyecto_id": 1 }
     """
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
         token = request.data.get('token')
         if not token:
-            return Response({'detail': 'Token de invitación requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Token de invitación requerido.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             invitacion = Invitation.objects.select_related('proyecto').get(token=token)
         except Invitation.DoesNotExist:
-            return Response({'detail': 'Invitación no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'detail': 'Invitación no encontrada.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         invitacion_email = (invitacion.correo_electronico or '').strip().lower()
-        user_email_value = _get_user_email_normalized(request.user)
+        user_email = _get_user_email_normalized(request.user)
 
-        if invitacion_email != user_email_value:
-            return Response({'detail': 'El token no corresponde al usuario autenticado.'}, status=status.HTTP_403_FORBIDDEN)
+        if invitacion_email != user_email:
+            return Response(
+                {'detail': 'El token no corresponde al usuario autenticado.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
+        # marcar aceptada en el modelo (metodo del modelo)
         invitacion.marcar_aceptada(request.user)
 
-        # notificar por Channels
+        # Notificar por Channels
         try:
             channel_layer = get_channel_layer()
             if channel_layer:
@@ -122,8 +142,41 @@ class InvitacionAceptarAPIView(APIView):
                     'proyecto_id': invitacion.proyecto.id,
                     'usuario_id': request.user.id,
                 }
-                async_to_sync(channel_layer.group_send)(f'proyecto_{invitacion.proyecto.id}', payload)
+                async_to_sync(channel_layer.group_send)(
+                    f'proyecto_{invitacion.proyecto.id}', payload
+                )
         except Exception:
             logger.exception('Error notificando por Channels: %s', exc_info=True)
 
-        return Response({'detail': 'Invitación aceptada.', 'proyecto_id': invitacion.proyecto.id}, status=status.HTTP_200_OK)
+        return Response(
+            {'detail': 'Invitación aceptada.', 'proyecto_id': invitacion.proyecto.id},
+            status=status.HTTP_200_OK,
+        )
+
+
+class InvitacionesPorUsuarioProyectoAPIView(generics.ListAPIView):
+    """
+    GET /proyectos/<pk>/invitaciones/usuario/<usuario_id>/
+    Lista invitaciones del proyecto creadas por usuario_id.
+    """
+    serializer_class = InvitationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        proyecto = get_object_or_404(Proyecto, pk=self.kwargs.get('pk'))
+        return Invitation.objects.filter(
+            proyecto=proyecto, creado_por_id=self.kwargs.get('usuario_id')
+        ).order_by('-id')
+
+
+class InvitacionListAPIView(generics.ListAPIView):
+    """
+    GET  /proyectos/<pk>/invitaciones/listar/
+    Devuelve las invitaciones del proyecto (solo lectura).
+    """
+    serializer_class = InvitationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        proyecto_id = self.kwargs.get('pk')
+        return Invitation.objects.filter(proyecto_id=proyecto_id).order_by('-id')

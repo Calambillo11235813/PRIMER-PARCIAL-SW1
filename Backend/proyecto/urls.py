@@ -12,8 +12,9 @@ from .views_proyectos import (
 )
 from .views_invitaciones import (
     InvitacionCrearAPIView,
-    InvitacionListCreateAPIView,
+    InvitacionListAPIView,
     InvitacionAceptarAPIView,
+    InvitacionesPorUsuarioProyectoAPIView,
 )
 
 urlpatterns = [
@@ -32,6 +33,13 @@ urlpatterns = [
     path('proyectos/<int:pk>/colaboradores/<int:user_id>/', ColaboradorEliminarAPIView.as_view(), name='eliminar-colaborador'),
 
     # invitaciones
-    path('proyectos/<int:pk>/invitaciones/', InvitacionListCreateAPIView.as_view(), name='proyecto-invitaciones'),
+    path('proyectos/<int:pk>/invitaciones/listar/', InvitacionListAPIView.as_view(), name='proyecto-invitaciones-list'),
+    path('proyectos/<int:pk>/invitaciones/', InvitacionCrearAPIView.as_view(), name='proyecto-invitaciones'),
     path('invitaciones/aceptar/', InvitacionAceptarAPIView.as_view(), name='invitar-acept'),
+
+    path(
+        'proyectos/<int:pk>/invitaciones/usuario/<int:usuario_id>/',
+        InvitacionesPorUsuarioProyectoAPIView.as_view(),
+        name='invitaciones-por-usuario',
+    ),
 ]

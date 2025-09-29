@@ -15,6 +15,15 @@ export const API_ENDPOINTS = {
   PROYECTOS: '/api/proyectos/',
   DIAGRAMAS: '/api/diagramas/',
   USER_ME: '/api/me/',
+
+  // Invitaciones
+  // ruta para crear/listar (POST en /proyectos/:pk/invitaciones/, GET en /proyectos/:pk/invitaciones/listar/)
+  INVITACIONES_CREAR: '/api/proyectos/{pk}/invitaciones/',
+  INVITACIONES_LISTAR: '/api/proyectos/{pk}/invitaciones/listar/',
+  // listar invitaciones por usuario en proyecto
+  INVITACIONES_POR_USUARIO: '/api/proyectos/{pk}/invitaciones/usuario/{usuario_id}/',
+  // aceptar invitación
+  INVITACIONES_ACEPTAR: '/api/invitaciones/aceptar/',
 };
 
 // storage keys fallback (usados sólo si authService no provee funciones)

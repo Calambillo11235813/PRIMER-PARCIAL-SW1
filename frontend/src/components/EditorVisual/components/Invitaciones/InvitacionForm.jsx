@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { proyectoService } from '../../../../services/proyectoService';
+import { invitacionService } from '../../../../services/InvitacionService';
 import websocketService from '../../../../services/websocketService';
 
 const InvitacionForm = ({ projectId, onSuccess, setNotificacion }) => {
@@ -16,13 +16,11 @@ const InvitacionForm = ({ projectId, onSuccess, setNotificacion }) => {
     }
     setLoading(true);
     try {
-      const resp = await proyectoService.invitar(projectId, { correo_electronico: emailNorm, rol });
-      // si backend devuelve token, copiar link de aceptación
-      const token = resp?.data?.token;
+      const resp = await invitacionService.invitar(projectId, { correo_electronico: emailNorm, rol });
+      const token = resp?.token;
       if (token) {
         const acceptUrl = `${window.location.origin}/aceptar-invitacion?token=${encodeURIComponent(token)}`;
-        try { await navigator.clipboard.writeText(acceptUrl); }
-        catch (err) { /* ignore */ }
+        try { await navigator.clipboard.writeText(acceptUrl); } catch (err) { /* ignore */ }
         setNotificacion && setNotificacion({ tipo: 'success', mensaje: 'Invitación enviada. Link copiado al portapapeles.' });
       } else {
         setNotificacion && setNotificacion({ tipo: 'success', mensaje: 'Invitación enviada.' });
@@ -30,20 +28,38 @@ const InvitacionForm = ({ projectId, onSuccess, setNotificacion }) => {
       setCorreo('');
       setRol('colaborador');
       onSuccess && onSuccess();
-      // emitir evento WS para otros clientes
+
       try {
         websocketService.send({
           type: 'invitacion_creada',
-          payload: { proyecto_id: projectId, correo_electronico: emailNorm, estado: resp.data?.estado || 'pendiente' }
+          payload: {
+            proyecto_id: projectId,
+            correo_electronico: emailNorm,
+            estado: resp?.estado || 'pendiente',
+            invitacion_id: resp?.id,
+            token: resp?.token,
+          },
         });
       } catch (e) { /* ignore */ }
     } catch (err) {
-      console.error('Error invitando:', err);
-      console.error('Error response data:', err?.response?.data);
-      const msg = err?.response?.data;
-      // preferir detail o listar errores de campos
-      const texto = (msg?.detail) || (typeof msg === 'object' ? JSON.stringify(msg) : String(msg));
-      setNotificacion && setNotificacion({ tipo: 'error', mensaje: texto || 'Error al invitar' });
+      // Mostrar y registrar el payload de error devuelto por el servidor
+      console.error('Error invitando (raw):', err);
+      const payload = err.payload ?? (err.response && err.response.data) ?? null;
+      console.error('Error invitando (payload):', payload);
+      let mensaje;
+      if (!payload) {
+        mensaje = err.message || 'Error al invitar';
+      } else if (typeof payload === 'string') {
+        mensaje = payload;
+      } else if (payload.detail) {
+        mensaje = payload.detail;
+      } else if (payload.correo_electronico) {
+        // si el backend devuelve errores por campo
+        mensaje = Array.isArray(payload.correo_electronico) ? payload.correo_electronico.join(' ') : String(payload.correo_electronico);
+      } else {
+        mensaje = JSON.stringify(payload);
+      }
+      setNotificacion && setNotificacion({ tipo: 'error', mensaje });
     } finally {
       setLoading(false);
     }
@@ -53,7 +69,12 @@ const InvitacionForm = ({ projectId, onSuccess, setNotificacion }) => {
     <form onSubmit={submit} className="p-2">
       <div className="mb-2">
         <label className="block text-sm">Correo</label>
-        <input value={correo} onChange={e => setCorreo(e.target.value)} className="w-full input" placeholder="correo@ejemplo.com" />
+        <input
+          value={correo}
+          onChange={e => setCorreo(e.target.value)}
+          className="w-full input"
+          placeholder="correo@ejemplo.com"
+        />
       </div>
       <div className="mb-2">
         <label className="block text-sm">Rol</label>

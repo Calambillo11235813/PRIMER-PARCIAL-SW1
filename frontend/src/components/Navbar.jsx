@@ -6,7 +6,7 @@ import {
   PenTool, 
   User, 
   LogOut, 
-  Bell, 
+  Bell as BellIcon, 
   Search,
   Menu,
   X,
@@ -14,6 +14,7 @@ import {
   Settings,
   HelpCircle
 } from 'lucide-react';
+import NotificationBell from '../components/EditorVisual/components/Invitaciones/NotificationBell'; // ajustar ruta si hace falta
 
 const Navbar = ({ usuario, onLogout, onIrPerfil }) => {
   const [menuMovilAbierto, setMenuMovilAbierto] = useState(false);
@@ -167,12 +168,7 @@ const Navbar = ({ usuario, onLogout, onIrPerfil }) => {
 
               {/* Notificaciones */}
               <div className="relative">
-                <button className="p-2 rounded-lg hover:bg-green-700 transition-colors text-white relative">
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs flex items-center justify-center text-white">
-                    3
-                  </span>
-                </button>
+                <NotificationBell />
               </div>
 
               {/* Perfil dropdown */}

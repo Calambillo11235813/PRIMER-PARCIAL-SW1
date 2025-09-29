@@ -4,12 +4,12 @@ export const proyectoService = {
   /**
    * Obtiene la lista de todos los proyectos.
    * Si se pasa usuarioId, obtiene los proyectos del usuario.
-   * @param {number} usuarioId - ID del usuario (opcional).
-   * @returns {Promise<Array>} Lista de proyectos.
+   * @param {number|null} usuarioId
+   * @returns {Promise}
    */
   async obtenerProyectos(usuarioId = null) {
     if (usuarioId) {
-      const url = `${API_ENDPOINTS.PROYECTOS}usuario/${usuarioId}/`;
+      const url = `${API_ENDPOINTS.PROYECTOS}usuario/${encodeURIComponent(usuarioId)}/`;
       return await apiClient.get(url);
     }
     return await apiClient.get(API_ENDPOINTS.PROYECTOS);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { proyectoService } from '../../../../services/proyectoService';
+import { invitacionService } from '../../../../services/InvitacionService';
 import websocketService from '../../../../services/websocketService';
 
 const AceptarInvitacionPage = () => {
@@ -15,7 +15,7 @@ const AceptarInvitacionPage = () => {
     (async () => {
       setLoading(true);
       try {
-        const resp = await proyectoService.aceptarInvitacion(token);
+        const resp = await invitacionService.aceptarInvitacion(token);
         setMensaje('Invitación aceptada. Redirigiendo al proyecto...');
         // emitir notificación WS opcional para otros clientes
         try {
