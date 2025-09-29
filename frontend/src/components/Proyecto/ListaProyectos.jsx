@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { proyectoService } from '../../services/proyectoService';
+import { getToken } from '../../services/authService'; // <-- nuevo import
+import { useNavigate } from 'react-router-dom';
 import ObtenerProyecto from './ObtenerProyecto';
 import ActualizarProyecto from './ActualizarProyecto';
 import EliminarProyecto from './EliminarProyecto';
@@ -21,27 +23,25 @@ const ListaProyectos = () => {
   const [cargando, setCargando] = useState(true);
   const [proyectoSeleccionado, setProyectoSeleccionado] = useState(null);
   const [modo, setModo] = useState('lista'); // 'ver', 'editar', 'eliminar', 'crear'
+  const navigate = useNavigate(); // para redirecciones opcionales
 
   const cargarProyectos = async () => {
     setCargando(true);
-    // intentar obtener userId desde token en localStorage (claves comunes)
-    const token = localStorage.getItem('access') || localStorage.getItem('access_token') || localStorage.getItem('token');
+    const token = getToken();
     console.log('ListaProyectos:cargarProyectos token=', token);
+
+    // Si tu API requiere auth para listar proyectos y no hay token, redirigir a login
+    // Descomenta la siguiente línea si quieres forzar login:
+    // if (!token) return navigate('/login');
+
     let userId = null;
     if (token) {
-      const payload = parseJwt(token);
-      console.log('ListaProyectos: token payload=', payload);
-      // comprobar claves comunes en payload
-      userId = payload?.user_id || payload?.id || payload?.sub || null;
-    }
-    console.log('ListaProyectos: resolved userId=', userId);
-
-    // Mostrar la URL que se solicitará (útil para confirmar que llama al endpoint correcto)
-    try {
-      const apiUrl = userId ? `/api/proyectos/usuario/${userId}/` : '/api/proyectos/';
-      console.log('ListaProyectos: llamando a URL =', apiUrl);
-    } catch (e) {
-      console.log('ListaProyectos: error construyendo URL', e);
+      try {
+        const payload = parseJwt(token);
+        userId = payload?.user_id || payload?.id || payload?.sub || null;
+      } catch (e) {
+        userId = null;
+      }
     }
 
     const resp = await proyectoService.obtenerProyectos(userId);
@@ -51,7 +51,6 @@ const ListaProyectos = () => {
   };
 
   useEffect(() => {
-    console.log('ListaProyectos: useEffect monta -> idUsuario localStorage?', localStorage.getItem('access') || localStorage.getItem('access_token') || localStorage.getItem('token'));
     cargarProyectos();
   }, []);
 

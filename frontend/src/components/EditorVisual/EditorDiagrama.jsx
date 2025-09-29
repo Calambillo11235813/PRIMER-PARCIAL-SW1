@@ -14,6 +14,9 @@ import DiagramControls from './components/DiagramControls';
 import ClaseNodeRF from './ClaseNodeRF';
 import Toolbar from './Toolbar';
 import { TIPOS_RELACION } from './constants/umlTypes';
+import InvPanel from './components/Invitaciones/InvitacionPanel';
+
+
 
 let logCountEditorDiagrama = 0;
 function logEditorDiagrama(...args) {
@@ -162,8 +165,8 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
 
   return (
     <div className="editor-diagrama-container relative" style={{ height: '100%' }}>
-     
- 
+
+
 
       {/* Controles del editor */}
       <DiagramControls
@@ -174,17 +177,27 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
         puedeRehacer={history.canRedo}
         guardando={persistence.estaGuardando}
       />
+      <div className="flex h-full">
+        <div className="flex-1">
+          {/* Canvas principal */}
+          <DiagramCanvas
+            editorState={editorState}
+            dragDrop={dragDrop}
+            edgeManagement={edgeManagement}
+            contextMenu={contextMenu}
+            onReactFlowInit={dragDrop.onReactFlowInit}
+            nodeTypes={nodeTypes}
+          />
+        </div>
 
-      {/* Canvas principal */}
-      <DiagramCanvas
-        editorState={editorState}
-        dragDrop={dragDrop}
-        edgeManagement={edgeManagement}
-        contextMenu={contextMenu}
-        onReactFlowInit={dragDrop.onReactFlowInit}
-        nodeTypes={nodeTypes}
-      />
-      
+        {/* Panel lateral de invitaciones */}
+        {projectId && (
+          <div className="hidden md:block">
+            <InvPanel projectId={projectId} setNotificacion={persistence.setNotificacion} />
+          </div>
+        )}
+      </div>
+
       {/* Gestor de modales y menús */}
       <ModalsManager
         claseEditando={persistence.claseEditando}
@@ -212,7 +225,7 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
         relacionEditando={edgeManagement.relacionEditando}
 
 
-        
+
         onGuardarRelacion={(relacionActualizada) => {
           logEditorDiagrama('Relación actualizada:', relacionActualizada);
 
@@ -282,16 +295,16 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
             edgesPrevios.map(edge =>
               edge.id === relacionActualizada.id
                 ? {
-                    ...edge,
-                    source: relacionActualizada.source,
-                    sourceHandle: relacionActualizada.sourceHandle,
-                    target: relacionActualizada.target,
-                    targetHandle: relacionActualizada.targetHandle,
-                    data: {
-                      ...edge.data,
-                      ...relacionActualizada.data,
-                    },
-                  }
+                  ...edge,
+                  source: relacionActualizada.source,
+                  sourceHandle: relacionActualizada.sourceHandle,
+                  target: relacionActualizada.target,
+                  targetHandle: relacionActualizada.targetHandle,
+                  data: {
+                    ...edge.data,
+                    ...relacionActualizada.data,
+                  },
+                }
                 : edge
             )
           );
@@ -306,10 +319,10 @@ const EditorDiagrama = ({ estructuraInicial, projectId = null, diagramaId = null
         contextMenuActions={contextMenu.accionesContextMenu}
         nodos={editorState.nodes} // ← Agrega esta prop
       />
-      
+
       {/* Notificaciones toast */}
-      <ToastNotifications 
-        notificacion={persistence.notificacion} 
+      <ToastNotifications
+        notificacion={persistence.notificacion}
         onCerrar={persistence.limpiarNotificacion}
       />
     </div>

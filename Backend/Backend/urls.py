@@ -16,13 +16,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from .views import user_info  # Añade esta línea
+from .views import user_info
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('auth/', include('social_django.urls', namespace='social')),
-    path('api/user/', user_info),  # Añade esta línea
-    path('', include('usuario.urls')),  # Mantén esto para otras rutas
-    path('api/', include('usuario.urls')),  # Agrega esta línea para /api/user/me/
-    path('', include('proyecto.urls')),  # Asegúrate de que esté incluido
+    path('api/user/', user_info),
+    # usuario: mantener rutas públicas si las tienes
+    path('', include('usuario.urls')),            # rutas de frontend/otras vistas
+    # API: incluir las apps REST con el prefijo 'api/'
+    path('api/', include('usuario.urls')),        # si usuario.urls define endpoints API relativos
+    path('api/', include('proyecto.urls')),       # ahora proyecto.urls se sirve en /api/...
 ]

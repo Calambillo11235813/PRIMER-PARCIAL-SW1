@@ -1,8 +1,13 @@
 /**
  * Configuración global para las llamadas a la API
+ *
+ * - exporta API_URL y API_ENDPOINTS
+ * - permite registrar funciones de auth mediante registerAuth (opcional)
+ * - exporta apiClient: helper fetch que añade Authorization y maneja refresh
  */
 
 export const API_URL = 'http://127.0.0.1:8000';
+
 export const API_ENDPOINTS = {
   USUARIO: '/api/usuarios/',
   LOGIN: '/api/token/',
@@ -12,95 +17,113 @@ export const API_ENDPOINTS = {
   USER_ME: '/api/me/',
 };
 
-// Storage keys: unificadas
+// storage keys fallback (usados sólo si authService no provee funciones)
 const ACCESS_KEY = 'access_token';
 const REFRESH_KEY = 'refresh_token';
 
-/**
- * Guardado de tokens:
- * - Por defecto guarda en sessionStorage (sesión por pestaña).
- * - Si persistente=true guarda en localStorage (permanece entre pestañas).
- */
-export function setAccessToken(token, { persistente = false } = {}) {
+// fallback local implementations (se usan solo si authService no exporta las funciones)
+const _fallbackGetToken = () => window.sessionStorage.getItem(ACCESS_KEY) || window.localStorage.getItem(ACCESS_KEY);
+const _fallbackGetRefreshToken = () => window.sessionStorage.getItem(REFRESH_KEY) || window.localStorage.getItem(REFRESH_KEY);
+const _fallbackSetAccessToken = (token, { persistente = false } = {}) => {
   const storage = persistente ? window.localStorage : window.sessionStorage;
   storage.setItem(ACCESS_KEY, token);
-}
-export function setRefreshToken(token, { persistente = false } = {}) {
+};
+const _fallbackSetRefreshToken = (token, { persistente = false } = {}) => {
   const storage = persistente ? window.localStorage : window.sessionStorage;
   storage.setItem(REFRESH_KEY, token);
-}
-
-/**
- * Obtención de token:
- * - Prioriza sessionStorage (sesión actual por pestaña).
- * - Si no existe en sessionStorage, usa localStorage (persistente).
- */
-export function getToken() {
-  return window.sessionStorage.getItem(ACCESS_KEY) || window.localStorage.getItem(ACCESS_KEY);
-}
-export function getRefreshToken() {
-  return window.sessionStorage.getItem(REFRESH_KEY) || window.localStorage.getItem(REFRESH_KEY);
-}
-
-/**
- * Eliminación de tokens: limpiar ambos storages para asegurar logout completo.
- */
-export function removeToken() {
+};
+const _fallbackRemoveToken = () => {
   window.sessionStorage.removeItem(ACCESS_KEY);
   window.localStorage.removeItem(ACCESS_KEY);
-}
-export function removeRefreshToken() {
+};
+const _fallbackRemoveRefreshToken = () => {
   window.sessionStorage.removeItem(REFRESH_KEY);
   window.localStorage.removeItem(REFRESH_KEY);
+};
+
+// Internal holders (will default to fallbacks)
+let _getToken = _fallbackGetToken;
+let _getRefreshToken = _fallbackGetRefreshToken;
+let _setAccessToken = _fallbackSetAccessToken;
+let _setRefreshToken = _fallbackSetRefreshToken;
+let _removeToken = _fallbackRemoveToken;
+let _removeRefreshToken = _fallbackRemoveRefreshToken;
+
+/**
+ * registerAuth(authImpl)
+ * - Opcional: authService puede llamar registerAuth({ getToken, getRefreshToken, setAccessToken, ... })
+ *   para que apiConfig use sus implementaciones sin crear import circular.
+ */
+export function registerAuth(authImpl = {}) {
+  if (authImpl.getToken) _getToken = authImpl.getToken;
+  if (authImpl.getRefreshToken) _getRefreshToken = authImpl.getRefreshToken;
+  if (authImpl.setAccessToken) _setAccessToken = authImpl.setAccessToken;
+  if (authImpl.setRefreshToken) _setRefreshToken = authImpl.setRefreshToken;
+  if (authImpl.removeToken) _removeToken = authImpl.removeToken;
+  if (authImpl.removeRefreshToken) _removeRefreshToken = authImpl.removeRefreshToken;
 }
 
-// Compatibilidad: alias histórico setToken -> setAccessToken
-export function setToken(token, opts = {}) { return setAccessToken(token, opts); }
+// Export the functions (use these inside apiClient)
+export const getToken = () => _getToken();
+export const getRefreshToken = () => _getRefreshToken();
+export const setAccessToken = (t, opts) => _setAccessToken(t, opts);
+export const setRefreshToken = (t, opts) => _setRefreshToken(t, opts);
+export const removeToken = () => _removeToken();
+export const removeRefreshToken = () => _removeRefreshToken();
 
-// apiClient (sin cambios de firma) pero usa getToken/getRefreshToken anteriores
+/**
+ * apiClient: helper minimalista usando fetch
+ * - path: ruta relativa (ej. API_ENDPOINTS.PROYECTOS + '3/invitaciones/') o URL absoluta
+ * - agrega Authorization: Bearer <token> si getToken() devuelve valor
+ * - si recibe 401 y respuesta indica token inválido intenta refresh si getRefreshToken() existe
+ */
 export const apiClient = {
-  async request(method, url, data = null, _retry = false) {
-    const fullUrl = API_URL + url;
-    const skipAuth = url.includes(API_ENDPOINTS.LOGIN) || url.includes(API_ENDPOINTS.REFRESH);
-    if (!skipAuth) {
-      const token = getToken();
-      if (!token) {
-        console.error('DEBUG: No hay token disponible.');
-        const err = new Error('No hay token disponible.');
-        err.status = 401;
-        throw err;
-      }
+  async request(method, pathOrUrl, data = null, _retry = false) {
+    const url = pathOrUrl.startsWith('http') ? pathOrUrl : `${API_URL}${pathOrUrl}`;
+    const skipAuth = pathOrUrl.includes(API_ENDPOINTS.LOGIN) || pathOrUrl.includes(API_ENDPOINTS.REFRESH);
+
+    const token = !skipAuth ? getToken() : null;
+    if (!skipAuth && !token) {
+      // No token: la app decide si esto es fatal; devolvemos error para que el caller lo maneje.
+      const err = new Error('No hay token disponible.');
+      err.status = 401;
+      throw err;
     }
 
-    const headers = { 'Accept': 'application/json' };
-    if (getToken() && !skipAuth) headers['Authorization'] = `Bearer ${getToken()}`;
+    const headers = { Accept: 'application/json' };
+    if (token && !skipAuth) headers['Authorization'] = `Bearer ${token}`;
     if (method !== 'GET') headers['Content-Type'] = 'application/json';
+
     const options = { method, headers };
     if (data) options.body = JSON.stringify(data);
 
     try {
-      let resp = await fetch(fullUrl, options);
+      const resp = await fetch(url, options);
       const text = await resp.text();
-      const json = text ? JSON.parse(text) : null;
+      let json = null;
+      try { json = text ? JSON.parse(text) : null; } catch (e) { json = text; }
 
       if (!resp.ok) {
-        const tokenInvalid = json && (json.code === 'token_not_valid' || (json.detail && json.detail.toString().toLowerCase().includes('token_not_valid')));
+        // manejar token inválido -> intentar refresh (si disponible)
+        const tokenInvalid = json && (json.code === 'token_not_valid' || (json.detail && String(json.detail).toLowerCase().includes('token_not_valid')));
         if (resp.status === 401 && tokenInvalid && !_retry) {
-          const refresh = getRefreshToken();
+          const refresh = getRefreshToken ? getRefreshToken() : null;
           if (refresh) {
-            const refreshRes = await fetch(API_URL + API_ENDPOINTS.REFRESH, {
+            // intentar refresh
+            const refreshRes = await fetch(`${API_URL}${API_ENDPOINTS.REFRESH}`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
               body: JSON.stringify({ refresh }),
             });
             const refreshText = await refreshRes.text();
             const refreshJson = refreshText ? JSON.parse(refreshText) : null;
             if (refreshRes.ok && refreshJson.access) {
-              // guardar nuevo access y reintentar
+              // guardar nuevo access token y reintentar
               setAccessToken(refreshJson.access);
               if (refreshJson.refresh) setRefreshToken(refreshJson.refresh);
-              return this.request(method, url, data, true);
+              return this.request(method, pathOrUrl, data, true);
             } else {
+              // refresh falló: limpiar tokens y propagar error
               removeToken();
               removeRefreshToken();
               const error = new Error('Refresh token inválido.');
@@ -124,8 +147,8 @@ export const apiClient = {
     }
   },
 
-  get(url) { return this.request('GET', url); },
-  post(url, data) { return this.request('POST', url, data); },
-  put(url, data) { return this.request('PUT', url, data); },
-  delete(url) { return this.request('DELETE', url); },
+  get(path) { return this.request('GET', path); },
+  post(path, body) { return this.request('POST', path, body); },
+  put(path, body) { return this.request('PUT', path, body); },
+  delete(path) { return this.request('DELETE', path); },
 };

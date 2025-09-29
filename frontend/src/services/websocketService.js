@@ -202,3 +202,75 @@ export const CambioService = {
         datos: { id: relacionId }
     })
 };
+
+// Preferencia para Vite: use import.meta.env.VITE_WS_URL (defínelo en .env), si no usar fallback a la URL local
+const DEFAULT_WS_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_WS_URL) ||
+  ((window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/');
+
+let socket = null;
+let subscribers = new Set();
+let reconnectTimer = null;
+let tokenForConnect = null;
+
+function _notify(message) {
+  subscribers.forEach((h) => {
+    try { h(message); } catch (e) { console.error('ws subscriber error', e); }
+  });
+}
+
+function _connect() {
+  if (!tokenForConnect) return;
+  const url = `${DEFAULT_WS_URL}?token=${encodeURIComponent(tokenForConnect)}`;
+  socket = new WebSocket(url);
+
+  socket.onopen = () => {
+    console.info('websocket connected');
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  };
+
+  socket.onmessage = (ev) => {
+    try {
+      const data = JSON.parse(ev.data);
+      _notify(data);
+    } catch (e) {
+      console.warn('ws message parse error', e);
+    }
+  };
+
+  socket.onclose = () => {
+    console.info('websocket closed, retrying in 2s');
+    reconnectTimer = setTimeout(() => _connect(), 2000);
+  };
+
+  socket.onerror = (err) => {
+    console.error('websocket error', err);
+    socket.close();
+  };
+}
+
+export const websocketService = {
+  connect(token) {
+    tokenForConnect = token;
+    if (socket && socket.readyState === WebSocket.OPEN) return;
+    _connect();
+  },
+  disconnect() {
+    if (socket) { socket.close(); socket = null; }
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  },
+  send(obj) {
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    try { socket.send(JSON.stringify(obj)); }
+    catch (e) { console.error('ws send error', e); }
+  },
+  subscribe(handler) {
+    subscribers.add(handler);
+    return () => subscribers.delete(handler);
+  },
+  unsubscribe(handler) {
+    subscribers.delete(handler);
+  }
+};
+
+export default websocketService;

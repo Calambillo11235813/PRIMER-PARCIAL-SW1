@@ -55,4 +55,12 @@ export const getCurrentUser = async () => {
     console.error('getCurrentUser: Error obteniendo usuario actual:', error);
     return null;
   }
+}
+
+// Obtener token de forma centralizada (usa las claves que usa tu app)
+export const getToken = () => {
+  return localStorage.getItem('access') ||
+         localStorage.getItem('access_token') ||
+         localStorage.getItem('token') ||
+         null;
 };

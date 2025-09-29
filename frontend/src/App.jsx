@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { getCurrentUser, logout, login } from './services/authService';
-import { apiClient, API_ENDPOINTS } from './services/apiConfig';
+import { apiClient, API_ENDPOINTS, getToken } from './services/apiConfig';
+import websocketService from './services/websocketService';
 import Login from './pages/Login';
 import Navbar from './components/Navbar';
 import PerfilUsuario from './pages/PerfilUsuario';
@@ -11,7 +12,7 @@ import ListaProyectos from './components/Proyecto/ListaProyectos';
 import EditorDiagrama from './components/EditorVisual/EditorDiagrama';
 import ListaDiagramas from './components/Proyecto/Diagramas/ListaDiagramas';
 import EditorDiagramaPage from './pages/EditorDiagramaPage';  // Nuevo import
-
+import AceptarInvitacionPage from './components/EditorVisual/components/Invitaciones/AceptarInvitacion.jsx';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -33,15 +34,13 @@ function App() {
   
 
   useEffect(() => {
-    // Si tienes CSRF en el backend, puedes eliminar esta línea con JWT puro
-    // apiClient.get(API_ENDPOINTS.CSRF).then(() => {
-    //   console.log('CSRF cookie establecida');
-    // });
-
     const fetchUser = async () => {
       try {
         const userData = await getCurrentUser();
         setUser(userData);
+        // conectar WS si hay token disponible
+        const token = getToken ? getToken() : localStorage.getItem('token');
+        if (token) websocketService.connect(token);
       } catch (error) {
         setUser(null);
       } finally {
@@ -50,6 +49,11 @@ function App() {
     };
 
     fetchUser();
+
+    // desconectar WS al desmontar la app
+    return () => {
+      websocketService.disconnect();
+    };
   }, []);
 
   const handleLogin = async (correo_electronico, password) => {
@@ -58,6 +62,9 @@ function App() {
       if (respuesta && respuesta.access) {
         const usuarioActual = await getCurrentUser();
         setUser(usuarioActual);
+        // conectar WS tras login
+        const token = getToken ? getToken() : localStorage.getItem('token');
+        if (token) websocketService.connect(token);
         navigate('/'); // Redirigir al dashboard después de iniciar sesión
       }
     } catch (err) {
@@ -67,6 +74,8 @@ function App() {
 
   const handleLogout = async () => {
     await logout();
+    // desconectar WS al hacer logout
+    websocketService.disconnect();
     setUser(null);
     setMostrarPerfil(false);
   };
@@ -114,6 +123,9 @@ function App() {
           <Route path="/editor" element={<EditorDiagramaPage />} />
           <Route path="/diagramas" element={<ListaDiagramas />} />
           <Route path="/editor/:idDiagrama" element={<EditorDiagramaPage />} />
+
+          {/* Ruta pública para aceptar invitaciones (deep link desde email) */}
+          <Route path="/aceptar-invitacion" element={<AceptarInvitacionPage />} />
         </Routes>
       </main>
     </div>

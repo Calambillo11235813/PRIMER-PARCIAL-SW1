@@ -55,4 +55,37 @@ export const proyectoService = {
     // DELETE /proyectos/<id>/
     return await apiClient.delete(`${API_ENDPOINTS.PROYECTOS}${idProyecto}/`);
   },
+
+  // -------------------
+  // Métodos de invitaciones
+  // -------------------
+
+  /**
+   * Obtiene las invitaciones de un proyecto.
+   * @param {number} idProyecto
+   * @returns {Promise<Object>}
+   */
+  async obtenerInvitaciones(idProyecto) {
+    return await apiClient.get(`${API_ENDPOINTS.PROYECTOS}${idProyecto}/invitaciones/`);
+  },
+
+  /**
+   * Crear/Enviar una invitación para un proyecto.
+   * payload: { correo_electronico, rol }
+   * @param {number} idProyecto
+   * @param {Object} payload
+   * @returns {Promise<Object>}
+   */
+  async invitar(idProyecto, payload) {
+    return await apiClient.post(`${API_ENDPOINTS.PROYECTOS}${idProyecto}/invitaciones/`, payload);
+  },
+
+  /**
+   * Aceptar invitación (endpoint global).
+   * @param {string} token
+   * @returns {Promise<Object>}
+   */
+  async aceptarInvitacion(token) {
+    return await apiClient.post(API_ENDPOINTS.INVITACIONES_ACEPTAR, { token });
+  }
 };

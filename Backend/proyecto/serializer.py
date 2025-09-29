@@ -50,6 +50,9 @@ class InvitationSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         proyecto = attrs.get('proyecto')
         correo = attrs.get('correo_electronico')
+        # Validación explícita: correo requerido
+        if not correo or (isinstance(correo, str) and not correo.strip()):
+            raise serializers.ValidationError({'correo_electronico': 'Este campo es requerido.'})
         # evitar duplicados: si ya existe una invitación para ese par, devolver error de validación
         if Invitation.objects.filter(proyecto=proyecto, correo_electronico__iexact=correo).exists():
             raise serializers.ValidationError({'detail': 'Ya existe una invitación para ese correo en este proyecto.'})
@@ -106,3 +109,20 @@ class InvitationSerializer(serializers.ModelSerializer):
                 return invitacion
         except IntegrityError:
             raise serializers.ValidationError({'detail': 'Conflicto al crear la invitación (posible duplicado).'})
+
+    def to_internal_value(self, data):
+        """
+        Acepta alias comunes desde el frontend y normaliza el correo.
+        - Permite que el frontend envíe "email" o "correo_electronico".
+        - Normaliza correo: strip() y lower().
+        """
+        data = data.copy()
+        # map alias 'email' -> 'correo_electronico' si aplica
+        if 'email' in data and 'correo_electronico' not in data:
+            data['correo_electronico'] = data.pop('email')
+
+        # normalizar el campo de correo si está presente y es string
+        if 'correo_electronico' in data and isinstance(data['correo_electronico'], str):
+            data['correo_electronico'] = data['correo_electronico'].strip().lower()
+
+        return super().to_internal_value(data)
